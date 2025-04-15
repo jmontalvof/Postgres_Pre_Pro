@@ -1,0 +1,74 @@
+name: Ejecutar script SQL definido en instruccionesPRE.txt
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'src/instruccionesPRE.txt'
+      - 'src/*.sql'
+
+jobs:
+  execute-sql:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar el repo
+        uses: actions/checkout@v3
+
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Leer variables desde instruccionesPRE.txt
+        id: leer_variables
+        run: |
+          BD=$(grep '^BD=' src/instruccionesPRE.txt | cut -d'=' -f2)
+          SCHEMA=$(grep '^CURRENT_SCHEMA=' src/instruccionesPRE.txt | cut -d'=' -f2)
+          SCRIPT=$(grep '^SQL=' src/instruccionesPRE.txt | cut -d'=' -f2)
+          echo "bd=$BD" >> $GITHUB_OUTPUT
+          echo "schema=$SCHEMA" >> $GITHUB_OUTPUT
+          echo "script=$SCRIPT" >> $GITHUB_OUTPUT
+
+      - name: Verificar que los secrets están presentes
+        run: |
+          echo "PGHOST set: ${{ secrets.PGHOST != '' }}"
+          echo "PGUSER set: ${{ secrets.PGUSER != '' }}"
+          echo "PGPASSWORD set: ${{ secrets.PGPASSWORD != '' }}"
+          echo "PGPORT set: ${{ secrets.PGPORT != '' }}"
+          echo "PGDATABASE set: ${{ secrets.PGDATABASE != '' }}"
+
+      - name: Probar conexión a la base de datos
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+        run: |
+          echo "🔗 Conectando a $PGHOST:$PGPORT como $PGUSER a la base $PGDATABASE"
+          psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c '\conninfo'
+
+      - name: Verificar que el esquema existe
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+        run: |
+          EXISTE=$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tAc "SELECT 1 FROM information_schema.schemata WHERE schema_name='${{ steps.leer_variables.outputs.schema }}'")
+          if [ "$EXISTE" != "1" ]; then
+            echo "❌ El esquema '${{ steps.leer_variables.outputs.schema }}' no existe"
+            exit 1
+          fi
+          echo "✅ El esquema '${{ steps.leer_variables.outputs.schema }}' existe"
+
+      - name: Ejecutar el script SQL
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
+        run: |
+          echo "🚀 Ejecutando el script src/${{ steps.leer_variables.outputs.script }}"
+          psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v schema=${{ steps.leer_variables.outputs.schema }} -f "src/${{ steps.leer_variables.outputs.script }}"
