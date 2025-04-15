@@ -1,0 +1,3 @@
+BD=empresa
+CURRENT_SCHEMA=empleados
+SQL=inserta.sql
