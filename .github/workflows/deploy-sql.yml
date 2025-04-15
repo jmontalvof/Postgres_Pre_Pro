@@ -21,44 +21,34 @@ jobs:
       - name: Leer variables desde instruccionesPRE.txt
         id: leer_variables
         run: |
-          # Extraer valores desde el fichero
           BD=$(grep '^BD=' src/instruccionesPRE.txt | cut -d'=' -f2)
           SCHEMA=$(grep '^CURRENT_SCHEMA=' src/instruccionesPRE.txt | cut -d'=' -f2)
           SCRIPT=$(grep '^SQL=' src/instruccionesPRE.txt | cut -d'=' -f2)
-
           echo "bd=$BD" >> $GITHUB_OUTPUT
           echo "schema=$SCHEMA" >> $GITHUB_OUTPUT
           echo "script=$SCRIPT" >> $GITHUB_OUTPUT
 
-      - name: Verificar que la base de datos existe
+      - name: Probar conexión a la base de datos
         env:
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
         run: |
-          EXISTE=$(psql -h ${{ secrets.PGHOST }} -U ${{ secrets.PGUSER }} -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${{ steps.leer_variables.outputs.bd }}'")
-          if [ "$EXISTE" != "1" ]; then
-            echo "❌ La base de datos '${{ steps.leer_variables.outputs.bd }}' no existe"
-            exit 1
-          fi
-          echo "✅ La base de datos existe"
+          echo "🔗 Probar conexión a la base de datos '${{ secrets.PGDATABASE }}'"
+          psql -h ${{ secrets.PGHOST }}                -p ${{ secrets.PGPORT }}                -U ${{ secrets.PGUSER }}                -d ${{ secrets.PGDATABASE }}                -c '\conninfo'
 
       - name: Verificar que el esquema existe
         env:
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
         run: |
-          EXISTE=$(psql -h ${{ secrets.PGHOST }} -U ${{ secrets.PGUSER }} -d ${{ steps.leer_variables.outputs.bd }} -tAc "SELECT 1 FROM information_schema.schemata WHERE schema_name='${{ steps.leer_variables.outputs.schema }}'")
+          EXISTE=$(psql -h ${{ secrets.PGHOST }}                        -p ${{ secrets.PGPORT }}                        -U ${{ secrets.PGUSER }}                        -d ${{ secrets.PGDATABASE }}                        -tAc "SELECT 1 FROM information_schema.schemata WHERE schema_name='${{ steps.leer_variables.outputs.schema }}'")
           if [ "$EXISTE" != "1" ]; then
             echo "❌ El esquema '${{ steps.leer_variables.outputs.schema }}' no existe"
             exit 1
           fi
-          echo "✅ El esquema existe"
+          echo "✅ El esquema '${{ steps.leer_variables.outputs.schema }}' existe"
 
       - name: Ejecutar el script SQL
         env:
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
         run: |
           echo "🚀 Ejecutando el script ${{ steps.leer_variables.outputs.script }}"
-          psql -h ${{ secrets.PGHOST }} \
-               -U ${{ secrets.PGUSER }} \
-               -d ${{ steps.leer_variables.outputs.bd }} \
-               -v schema=${{ steps.leer_variables.outputs.schema }} \
-               -f src/${{ steps.leer_variables.outputs.script }}
+          psql -h ${{ secrets.PGHOST }}                -p ${{ secrets.PGPORT }}                -U ${{ secrets.PGUSER }}                -d ${{ secrets.PGDATABASE }}                -v schema=${{ steps.leer_variables.outputs.schema }}                -f src/${{ steps.leer_variables.outputs.script }}
