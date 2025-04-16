@@ -1,3 +1,4 @@
+
 name: "Postgres_Pre_Pro - SQL Deployment"
 
 on:
@@ -22,34 +23,42 @@ jobs:
 
       - name: Establecer variables de entorno por rama
         id: variables
+        env:
+          PGHOST_PRO: ${{ secrets.PGHOST_PRO }}
+          PGUSER_PRO: ${{ secrets.PGUSER_PRO }}
+          PGPASSWORD_PRO: ${{ secrets.PGPASSWORD_PRO }}
+          PGPORT_PRO: ${{ secrets.PGPORT_PRO }}
+          PGDATABASE_PRO: ${{ secrets.PGDATABASE_PRO }}
+          PGHOST_DEV: ${{ secrets.PGHOST_DEV }}
+          PGUSER_DEV: ${{ secrets.PGUSER_DEV }}
+          PGPASSWORD_DEV: ${{ secrets.PGPASSWORD_DEV }}
+          PGPORT_DEV: ${{ secrets.PGPORT_DEV }}
+          PGDATABASE_DEV: ${{ secrets.PGDATABASE_DEV }}
         run: |
           if [ "${GITHUB_REF##*/}" = "main" ]; then
-            echo "host=${{ secrets.PGHOST_PRO }}" >> $GITHUB_OUTPUT
-            echo "user=${{ secrets.PGUSER_PRO }}" >> $GITHUB_OUTPUT
-            echo "password=${{ secrets.PGPASSWORD_PRO }}" >> $GITHUB_OUTPUT
-            echo "port=${{ secrets.PGPORT_PRO }}" >> $GITHUB_OUTPUT
-            echo "database=${{ secrets.PGDATABASE_PRO }}" >> $GITHUB_OUTPUT
+            echo "host=$PGHOST_PRO" >> $GITHUB_OUTPUT
+            echo "user=$PGUSER_PRO" >> $GITHUB_OUTPUT
+            echo "password=$PGPASSWORD_PRO" >> $GITHUB_OUTPUT
+            echo "port=$PGPORT_PRO" >> $GITHUB_OUTPUT
+            echo "database=$PGDATABASE_PRO" >> $GITHUB_OUTPUT
             echo "script_file=scripts_pro.txt" >> $GITHUB_OUTPUT
             echo "entorno=PRO" >> $GITHUB_OUTPUT
           else
-            echo "host=${{ secrets.PGHOST_DEV }}" >> $GITHUB_OUTPUT
-            echo "user=${{ secrets.PGUSER_DEV }}" >> $GITHUB_OUTPUT
-            echo "password=${{ secrets.PGPASSWORD_DEV }}" >> $GITHUB_OUTPUT
-            echo "port=${{ secrets.PGPORT_DEV }}" >> $GITHUB_OUTPUT
-            echo "database=${{ secrets.PGDATABASE_DEV }}" >> $GITHUB_OUTPUT
+            echo "host=$PGHOST_DEV" >> $GITHUB_OUTPUT
+            echo "user=$PGUSER_DEV" >> $GITHUB_OUTPUT
+            echo "password=$PGPASSWORD_DEV" >> $GITHUB_OUTPUT
+            echo "port=$PGPORT_DEV" >> $GITHUB_OUTPUT
+            echo "database=$PGDATABASE_DEV" >> $GITHUB_OUTPUT
             echo "script_file=scripts_dev.txt" >> $GITHUB_OUTPUT
             echo "entorno=DEV" >> $GITHUB_OUTPUT
           fi
 
-      - name: Verificar carga de secrets (sin revelar datos)
-        env:
-          PGHOST: ${{ steps.variables.outputs.host }}
-          PGUSER: ${{ steps.variables.outputs.user }}
-          PGPASSWORD: ${{ steps.variables.outputs.password }}
-          PGPORT: ${{ steps.variables.outputs.port }}
-          PGDATABASE: ${{ steps.variables.outputs.database }}
+      - name: Debug - Mostrar valores capturados
         run: |
-          echo "✔️ Secrets cargados para entorno: ${{ steps.variables.outputs.entorno }}"
+          echo "📦 PGHOST=${{ steps.variables.outputs.host }}"
+          echo "👤 PGUSER=${{ steps.variables.outputs.user }}"
+          echo "🧩 PGDATABASE=${{ steps.variables.outputs.database }}"
+          echo "🛠️ Script file: ${{ steps.variables.outputs.script_file }}"
 
       - name: Probar conexión a la base de datos
         env:
