@@ -28,13 +28,19 @@ jobs:
           echo "schema=$SCHEMA" >> $GITHUB_OUTPUT
           echo "script=$SCRIPT" >> $GITHUB_OUTPUT
 
-      - name: Verificar que los secrets están presentes
+      - name: Verificar carga de secrets (sin revelar datos)
+        env:
+          PGHOST: ${{ secrets.PGHOST }}
+          PGUSER: ${{ secrets.PGUSER }}
+          PGPASSWORD: ${{ secrets.PGPASSWORD }}
+          PGPORT: ${{ secrets.PGPORT }}
+          PGDATABASE: ${{ secrets.PGDATABASE }}
         run: |
-          echo "PGHOST set: ${{ secrets.PGHOST != '' }}"
-          echo "PGUSER set: ${{ secrets.PGUSER != '' }}"
-          echo "PGPASSWORD set: ${{ secrets.PGPASSWORD != '' }}"
-          echo "PGPORT set: ${{ secrets.PGPORT != '' }}"
-          echo "PGDATABASE set: ${{ secrets.PGDATABASE != '' }}"
+          [ -n "$PGHOST" ] && echo "✔️ PGHOST cargado" || echo "❌ PGHOST no cargado"
+          [ -n "$PGUSER" ] && echo "✔️ PGUSER cargado" || echo "❌ PGUSER no cargado"
+          [ -n "$PGPASSWORD" ] && echo "✔️ PGPASSWORD cargado" || echo "❌ PGPASSWORD no cargado"
+          [ -n "$PGPORT" ] && echo "✔️ PGPORT cargado" || echo "❌ PGPORT no cargado"
+          [ -n "$PGDATABASE" ] && echo "✔️ PGDATABASE cargado" || echo "❌ PGDATABASE no cargado"
 
       - name: Probar conexión a la base de datos
         env:
@@ -44,7 +50,7 @@ jobs:
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
           PGDATABASE: ${{ secrets.PGDATABASE }}
         run: |
-          echo "🔗 Conectando a $PGHOST:$PGPORT como $PGUSER a la base $PGDATABASE"
+          echo "🔗 Verificando conexión a la base de datos..."
           psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c '\conninfo'
 
       - name: Verificar que el esquema existe
