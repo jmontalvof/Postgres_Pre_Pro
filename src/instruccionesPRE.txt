@@ -1,3 +1,8 @@
 BD=empresa_stlw
+<<<<<<< HEAD
 CURRENT_SCHEMA=empleados
 SQL=crear_tabla.sql
+=======
+CURRENT_SCHEMA=public
+SQL=actualiza_usuarios.sql
+>>>>>>> 027d369 (Prueba de actualización de usuario)
