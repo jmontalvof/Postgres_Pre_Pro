@@ -1,4 +1,3 @@
-
 name: "Postgres_Pre_Pro - SQL Deployment"
 
 on:
@@ -36,51 +35,44 @@ jobs:
           PGDATABASE_DEV: ${{ secrets.PGDATABASE_DEV }}
         run: |
           if [ "${GITHUB_REF##*/}" = "main" ]; then
-            echo "host=$PGHOST_PRO" >> $GITHUB_OUTPUT
-            echo "user=$PGUSER_PRO" >> $GITHUB_OUTPUT
-            echo "password=$PGPASSWORD_PRO" >> $GITHUB_OUTPUT
-            echo "port=$PGPORT_PRO" >> $GITHUB_OUTPUT
-            echo "database=$PGDATABASE_PRO" >> $GITHUB_OUTPUT
+            echo "host=${PGHOST_PRO}" >> $GITHUB_OUTPUT
+            echo "user=${PGUSER_PRO}" >> $GITHUB_OUTPUT
+            echo "password=${PGPASSWORD_PRO}" >> $GITHUB_OUTPUT
+            echo "port=${PGPORT_PRO}" >> $GITHUB_OUTPUT
+            echo "database=${PGDATABASE_PRO}" >> $GITHUB_OUTPUT
             echo "script_file=scripts_pro.txt" >> $GITHUB_OUTPUT
             echo "entorno=PRO" >> $GITHUB_OUTPUT
           else
-            echo "host=$PGHOST_DEV" >> $GITHUB_OUTPUT
-            echo "user=$PGUSER_DEV" >> $GITHUB_OUTPUT
-            echo "password=$PGPASSWORD_DEV" >> $GITHUB_OUTPUT
-            echo "port=$PGPORT_DEV" >> $GITHUB_OUTPUT
-            echo "database=$PGDATABASE_DEV" >> $GITHUB_OUTPUT
+            echo "host=${PGHOST_DEV}" >> $GITHUB_OUTPUT
+            echo "user=${PGUSER_DEV}" >> $GITHUB_OUTPUT
+            echo "password=${PGPASSWORD_DEV}" >> $GITHUB_OUTPUT
+            echo "port=${PGPORT_DEV}" >> $GITHUB_OUTPUT
+            echo "database=${PGDATABASE_DEV}" >> $GITHUB_OUTPUT
             echo "script_file=scripts_dev.txt" >> $GITHUB_OUTPUT
             echo "entorno=DEV" >> $GITHUB_OUTPUT
           fi
 
-      - name: Debug - Mostrar valores capturados
-        run: |
-          echo "📦 PGHOST=${{ steps.variables.outputs.host }}"
-          echo "👤 PGUSER=${{ steps.variables.outputs.user }}"
-          echo "🧩 PGDATABASE=${{ steps.variables.outputs.database }}"
-          echo "🛠️ Script file: ${{ steps.variables.outputs.script_file }}"
-
       - name: Probar conexión a la base de datos
-        env:
-          PGHOST: ${{ steps.variables.outputs.host }}
-          PGPORT: ${{ steps.variables.outputs.port }}
-          PGUSER: ${{ steps.variables.outputs.user }}
-          PGPASSWORD: ${{ steps.variables.outputs.password }}
-          PGDATABASE: ${{ steps.variables.outputs.database }}
         run: |
-          psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c '\conninfo'
+          echo "🔗 Probar conexión a ${{ steps.variables.outputs.database }} (${{
+            steps.variables.outputs.entorno }})"
+          PGPASSWORD=${{ steps.variables.outputs.password }} psql \
+            -h "${{ steps.variables.outputs.host }}" \
+            -p "${{ steps.variables.outputs.port }}" \
+            -U "${{ steps.variables.outputs.user }}" \
+            -d "${{ steps.variables.outputs.database }}" \
+            -c '\conninfo'
 
       - name: Ejecutar scripts listados
-        env:
-          PGHOST: ${{ steps.variables.outputs.host }}
-          PGPORT: ${{ steps.variables.outputs.port }}
-          PGUSER: ${{ steps.variables.outputs.user }}
-          PGPASSWORD: ${{ steps.variables.outputs.password }}
-          PGDATABASE: ${{ steps.variables.outputs.database }}
         run: |
           while IFS= read -r script; do
             echo "🚀 Ejecutando src/$script"
-            psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -f "src/$script"
+            PGPASSWORD=${{ steps.variables.outputs.password }} psql \
+              -h "${{ steps.variables.outputs.host }}" \
+              -p "${{ steps.variables.outputs.port }}" \
+              -U "${{ steps.variables.outputs.user }}" \
+              -d "${{ steps.variables.outputs.database }}" \
+              -f "src/$script"
           done < "src/${{ steps.variables.outputs.script_file }}"
 
       - name: Notificación al finalizar
