@@ -1,4 +1,3 @@
 BD=empresa_stlw
 CURRENT_SCHEMA=public
 SQL=actualiza_usuarios.sql
-SQL=inserta_usuarios.sql
