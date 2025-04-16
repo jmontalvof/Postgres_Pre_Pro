@@ -1,3 +1,4 @@
 BD=empresa_stlw
 CURRENT_SCHEMA=public
 SQL=scripts.txt
+# Cambio de prueba desde development
