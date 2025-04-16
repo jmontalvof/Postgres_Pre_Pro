@@ -1,4 +1,4 @@
-# 🗂️ Postgres_Pre - Despliegue automatizado de scripts SQL
+# 🗂️ Postgres_Pre_Pro - Despliegue automatizado de scripts SQL
 
 Este repositorio permite gestionar el despliegue de scripts SQL de forma automática en una base de datos PostgreSQL alojada en Render, utilizando GitHub Actions.
 
