@@ -6,7 +6,6 @@ on:
       - main
       - development
     paths:
-      - 'src/instruccionesPRE.txt'
       - 'src/*.sql'
       - 'src/scripts*.txt'
 
@@ -22,49 +21,58 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
       - name: Establecer variables de entorno por rama
-        id: vars
+        id: variables
         run: |
-          if [[ "${GITHUB_REF##*/}" == "main" ]]; then
-            echo "entorno=PRO" >> $GITHUB_OUTPUT
+          if [ "${GITHUB_REF##*/}" = "main" ]; then
+            echo "host=${{ secrets.PGHOST_PRO }}" >> $GITHUB_OUTPUT
+            echo "user=${{ secrets.PGUSER_PRO }}" >> $GITHUB_OUTPUT
+            echo "password=${{ secrets.PGPASSWORD_PRO }}" >> $GITHUB_OUTPUT
+            echo "port=${{ secrets.PGPORT_PRO }}" >> $GITHUB_OUTPUT
+            echo "database=${{ secrets.PGDATABASE_PRO }}" >> $GITHUB_OUTPUT
             echo "script_file=scripts_pro.txt" >> $GITHUB_OUTPUT
+            echo "entorno=PRO" >> $GITHUB_OUTPUT
           else
-            echo "entorno=DEV" >> $GITHUB_OUTPUT
+            echo "host=${{ secrets.PGHOST_DEV }}" >> $GITHUB_OUTPUT
+            echo "user=${{ secrets.PGUSER_DEV }}" >> $GITHUB_OUTPUT
+            echo "password=${{ secrets.PGPASSWORD_DEV }}" >> $GITHUB_OUTPUT
+            echo "port=${{ secrets.PGPORT_DEV }}" >> $GITHUB_OUTPUT
+            echo "database=${{ secrets.PGDATABASE_DEV }}" >> $GITHUB_OUTPUT
             echo "script_file=scripts_dev.txt" >> $GITHUB_OUTPUT
+            echo "entorno=DEV" >> $GITHUB_OUTPUT
           fi
 
       - name: Verificar carga de secrets (sin revelar datos)
         env:
-          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
-          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
-          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
-          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
-          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
+          PGHOST: ${{ steps.variables.outputs.host }}
+          PGUSER: ${{ steps.variables.outputs.user }}
+          PGPASSWORD: ${{ steps.variables.outputs.password }}
+          PGPORT: ${{ steps.variables.outputs.port }}
+          PGDATABASE: ${{ steps.variables.outputs.database }}
         run: |
-          echo "✔️ Secrets cargados para entorno: ${{ steps.vars.outputs.entorno }}"
+          echo "✔️ Secrets cargados para entorno: ${{ steps.variables.outputs.entorno }}"
 
       - name: Probar conexión a la base de datos
         env:
-          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
-          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
-          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
-          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
-          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
+          PGHOST: ${{ steps.variables.outputs.host }}
+          PGPORT: ${{ steps.variables.outputs.port }}
+          PGUSER: ${{ steps.variables.outputs.user }}
+          PGPASSWORD: ${{ steps.variables.outputs.password }}
+          PGDATABASE: ${{ steps.variables.outputs.database }}
         run: |
           psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c '\conninfo'
 
       - name: Ejecutar scripts listados
         env:
-          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
-          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
-          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
-          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
-          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
+          PGHOST: ${{ steps.variables.outputs.host }}
+          PGPORT: ${{ steps.variables.outputs.port }}
+          PGUSER: ${{ steps.variables.outputs.user }}
+          PGPASSWORD: ${{ steps.variables.outputs.password }}
+          PGDATABASE: ${{ steps.variables.outputs.database }}
         run: |
           while IFS= read -r script; do
             echo "🚀 Ejecutando src/$script"
             psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -f "src/$script"
-          done < "src/${{ steps.vars.outputs.script_file }}"
+          done < "src/${{ steps.variables.outputs.script_file }}"
 
       - name: Notificación al finalizar
-        run: echo "✅ Despliegue completado con éxito en entorno ${{ steps.vars.outputs.entorno }}"
-
+        run: echo "✅ Despliegue completado con éxito en entorno ${{ steps.variables.outputs.entorno }}"
