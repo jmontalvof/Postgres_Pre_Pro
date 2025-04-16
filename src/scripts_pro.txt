@@ -1,1 +1,3 @@
-update_tabla_3_2.sql
+crear_tabla_usuarios.sql
+inserta_usuarios.sql
+actualiza_usuarios.sql
