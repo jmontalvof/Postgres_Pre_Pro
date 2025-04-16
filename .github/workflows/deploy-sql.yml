@@ -1,4 +1,4 @@
-name: Ejecutar múltiples scripts SQL desde scripts.txt
+name: Postgres_Pre - SQL Deployment
 
 on:
   push:
@@ -15,6 +15,9 @@ jobs:
     steps:
       - name: Clonar el repo
         uses: actions/checkout@v3
+
+      - name: 📅 Mostrar fecha y hora del despliegue
+        run: date
 
       - name: Instalar cliente PostgreSQL
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
