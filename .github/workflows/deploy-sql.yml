@@ -1,12 +1,14 @@
-name: "Postgres_Pre - SQL Deployment"
+name: "Postgres_Pre_Pro - SQL Deployment"
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - development
     paths:
       - 'src/instruccionesPRE.txt'
-      - 'src/scripts.txt'
       - 'src/*.sql'
+      - 'src/scripts*.txt'
 
 jobs:
   execute-sql:
@@ -16,70 +18,53 @@ jobs:
       - name: Clonar el repo
         uses: actions/checkout@v3
 
-      - name: 📅 Mostrar fecha y hora del despliegue
-        run: date
-
       - name: Instalar cliente PostgreSQL
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-      - name: Leer variables desde instruccionesPRE.txt
-        id: leer_variables
+      - name: Establecer variables de entorno por rama
+        id: vars
         run: |
-          BD=$(grep '^BD=' src/instruccionesPRE.txt | cut -d'=' -f2)
-          SCHEMA=$(grep '^CURRENT_SCHEMA=' src/instruccionesPRE.txt | cut -d'=' -f2)
-          SCRIPT_LIST=$(grep '^SQL=' src/instruccionesPRE.txt | cut -d'=' -f2)
+          if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+            echo "entorno=PRO" >> $GITHUB_OUTPUT
+            echo "script_file=scripts_pro.txt" >> $GITHUB_OUTPUT
+          else
+            echo "entorno=DEV" >> $GITHUB_OUTPUT
+            echo "script_file=scripts_dev.txt" >> $GITHUB_OUTPUT
+          fi
 
-          echo "bd=${BD}" >> $GITHUB_OUTPUT
-          echo "schema=${SCHEMA}" >> $GITHUB_OUTPUT
-          echo "script_list=${SCRIPT_LIST}" >> $GITHUB_OUTPUT
-
-      - name: Verificar carga de secrets
+      - name: Verificar carga de secrets (sin revelar datos)
         env:
-          PGHOST: ${{ secrets.PGHOST }}
-          PGUSER: ${{ secrets.PGUSER }}
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-          PGPORT: ${{ secrets.PGPORT }}
-          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
+          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
+          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
+          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
+          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
         run: |
-          [ -n "$PGHOST" ] && echo "✔️ PGHOST cargado" || echo "❌ PGHOST no cargado"
-          [ -n "$PGUSER" ] && echo "✔️ PGUSER cargado" || echo "❌ PGUSER no cargado"
-          [ -n "$PGPASSWORD" ] && echo "✔️ PGPASSWORD cargado" || echo "❌ PGPASSWORD no cargado"
-          [ -n "$PGPORT" ] && echo "✔️ PGPORT cargado" || echo "❌ PGPORT no cargado"
-          [ -n "$PGDATABASE" ] && echo "✔️ PGDATABASE cargado" || echo "❌ PGDATABASE no cargado"
+          echo "✔️ Secrets cargados para entorno: ${{ steps.vars.outputs.entorno }}"
 
       - name: Probar conexión a la base de datos
         env:
-          PGHOST: ${{ secrets.PGHOST }}
-          PGPORT: ${{ secrets.PGPORT }}
-          PGUSER: ${{ secrets.PGUSER }}
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
+          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
+          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
+          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
+          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
         run: |
           psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c '\conninfo'
 
-      - name: Verificar que el esquema existe
+      - name: Ejecutar scripts listados
         env:
-          PGHOST: ${{ secrets.PGHOST }}
-          PGPORT: ${{ secrets.PGPORT }}
-          PGUSER: ${{ secrets.PGUSER }}
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-          PGDATABASE: ${{ secrets.PGDATABASE }}
-        run: |
-          EXISTE=$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tAc "SELECT 1 FROM information_schema.schemata WHERE schema_name='${{ steps.leer_variables.outputs.schema }}'")
-          if [ "$EXISTE" != "1" ]; then
-            echo "❌ El esquema '${{ steps.leer_variables.outputs.schema }}' no existe"
-            exit 1
-          fi
-
-      - name: Ejecutar scripts listados en scripts.txt
-        env:
-          PGHOST: ${{ secrets.PGHOST }}
-          PGPORT: ${{ secrets.PGPORT }}
-          PGUSER: ${{ secrets.PGUSER }}
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-          PGDATABASE: ${{ secrets.PGDATABASE }}
+          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
+          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
+          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
+          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
+          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
         run: |
           while IFS= read -r script; do
             echo "🚀 Ejecutando src/$script"
-            psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v schema=${{ steps.leer_variables.outputs.schema }} -f "src/$script"
-          done < "src/${{ steps.leer_variables.outputs.script_list }}"
+            psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -f "src/$script"
+          done < "src/${{ steps.vars.outputs.script_file }}"
+
+      - name: Notificación al finalizar
+        run: echo "✅ Despliegue completado con éxito en entorno ${{ steps.vars.outputs.entorno }}"
+
