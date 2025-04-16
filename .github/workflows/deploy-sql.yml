@@ -1,10 +1,11 @@
-name: Ejecutar script SQL definido en instruccionesPRE.txt
+name: Ejecutar múltiples scripts SQL desde scripts.txt
 
 on:
   push:
     branches: [ "main" ]
     paths:
       - 'src/instruccionesPRE.txt'
+      - 'src/scripts.txt'
       - 'src/*.sql'
 
 jobs:
@@ -23,12 +24,13 @@ jobs:
         run: |
           BD=$(grep '^BD=' src/instruccionesPRE.txt | cut -d'=' -f2)
           SCHEMA=$(grep '^CURRENT_SCHEMA=' src/instruccionesPRE.txt | cut -d'=' -f2)
-          SCRIPT=$(grep '^SQL=' src/instruccionesPRE.txt | cut -d'=' -f2)
-          echo "bd=$BD" >> $GITHUB_OUTPUT
-          echo "schema=$SCHEMA" >> $GITHUB_OUTPUT
-          echo "script=$SCRIPT" >> $GITHUB_OUTPUT
+          SCRIPT_LIST=$(grep '^SQL=' src/instruccionesPRE.txt | cut -d'=' -f2)
 
-      - name: Verificar carga de secrets (sin revelar datos)
+          echo "bd=${BD}" >> $GITHUB_OUTPUT
+          echo "schema=${SCHEMA}" >> $GITHUB_OUTPUT
+          echo "script_list=${SCRIPT_LIST}" >> $GITHUB_OUTPUT
+
+      - name: Verificar carga de secrets
         env:
           PGHOST: ${{ secrets.PGHOST }}
           PGUSER: ${{ secrets.PGUSER }}
@@ -50,7 +52,6 @@ jobs:
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
           PGDATABASE: ${{ secrets.PGDATABASE }}
         run: |
-          echo "🔗 Verificando conexión a la base de datos..."
           psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c '\conninfo'
 
       - name: Verificar que el esquema existe
@@ -66,9 +67,8 @@ jobs:
             echo "❌ El esquema '${{ steps.leer_variables.outputs.schema }}' no existe"
             exit 1
           fi
-          echo "✅ El esquema '${{ steps.leer_variables.outputs.schema }}' existe"
 
-      - name: Ejecutar el script SQL
+      - name: Ejecutar scripts listados en scripts.txt
         env:
           PGHOST: ${{ secrets.PGHOST }}
           PGPORT: ${{ secrets.PGPORT }}
@@ -76,5 +76,7 @@ jobs:
           PGPASSWORD: ${{ secrets.PGPASSWORD }}
           PGDATABASE: ${{ secrets.PGDATABASE }}
         run: |
-          echo "🚀 Ejecutando el script src/${{ steps.leer_variables.outputs.script }}"
-          psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v schema=${{ steps.leer_variables.outputs.schema }} -f "src/${{ steps.leer_variables.outputs.script }}"
+          while IFS= read -r script; do
+            echo "🚀 Ejecutando src/$script"
+            psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v schema=${{ steps.leer_variables.outputs.schema }} -f "src/$script"
+          done < "src/${{ steps.leer_variables.outputs.script_list }}"
