@@ -1,4 +1,4 @@
-name: Postgres_Pre - SQL Deployment
+name: "Postgres_Pre - SQL Deployment"
 
 on:
   push:
