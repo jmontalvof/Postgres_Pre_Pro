@@ -54,25 +54,14 @@ jobs:
 
       - name: Probar conexión a la base de datos
         run: |
-          echo "🔗 Probar conexión a ${{ steps.variables.outputs.database }} (${{
-            steps.variables.outputs.entorno }})"
-          PGPASSWORD=${{ steps.variables.outputs.password }} psql \
-            -h "${{ steps.variables.outputs.host }}" \
-            -p "${{ steps.variables.outputs.port }}" \
-            -U "${{ steps.variables.outputs.user }}" \
-            -d "${{ steps.variables.outputs.database }}" \
-            -c '\conninfo'
+          echo "🔗 Conectando a ${{ steps.variables.outputs.database }} en entorno ${{ steps.variables.outputs.entorno }}"
+          PGPASSWORD=${{ steps.variables.outputs.password }} psql             -h "${{ steps.variables.outputs.host }}"             -p "${{ steps.variables.outputs.port }}"             -U "${{ steps.variables.outputs.user }}"             -d "${{ steps.variables.outputs.database }}"             -c '\conninfo'
 
       - name: Ejecutar scripts listados
         run: |
           while IFS= read -r script; do
             echo "🚀 Ejecutando src/$script"
-            PGPASSWORD=${{ steps.variables.outputs.password }} psql \
-              -h "${{ steps.variables.outputs.host }}" \
-              -p "${{ steps.variables.outputs.port }}" \
-              -U "${{ steps.variables.outputs.user }}" \
-              -d "${{ steps.variables.outputs.database }}" \
-              -f "src/$script"
+            PGPASSWORD=${{ steps.variables.outputs.password }} psql               -h "${{ steps.variables.outputs.host }}"               -p "${{ steps.variables.outputs.port }}"               -U "${{ steps.variables.outputs.user }}"               -d "${{ steps.variables.outputs.database }}"               -f "src/$script"
           done < "src/${{ steps.variables.outputs.script_file }}"
 
       - name: Notificación al finalizar
