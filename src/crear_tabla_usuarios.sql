@@ -1,5 +1,7 @@
--- Crea tabla dentro del esquema "empleados"
+CREATE SCHEMA IF NOT EXISTS empleados;
+
 CREATE TABLE IF NOT EXISTS empleados.nueva_tabla (
-  id SERIAL PRIMARY KEY,
-  nombre TEXT
+    id SERIAL PRIMARY KEY,
+    nombre TEXT,
+    cargo TEXT
 );
