@@ -46,12 +46,6 @@ jobs:
         run: |
           echo "🔗 Conectando a $PGHOST:$PGPORT como $PGUSER a la base $PGDATABASE"
           psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c '\conninfo'
-      - name: Probar conexión a la base de datos
-        env:
-          PGPASSWORD: ${{ secrets.PGPASSWORD }}
-        run: |
-          echo "🔗 Probar conexión a la base de datos '${{ secrets.PGDATABASE }}'"
-          psql -h ${{ secrets.PGHOST }}                -p ${{ secrets.PGPORT }}                -U ${{ secrets.PGUSER }}                -d ${{ secrets.PGDATABASE }}                -c '\conninfo'
 
       - name: Verificar que el esquema existe
         env:
@@ -62,7 +56,6 @@ jobs:
           PGDATABASE: ${{ secrets.PGDATABASE }}
         run: |
           EXISTE=$(psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tAc "SELECT 1 FROM information_schema.schemata WHERE schema_name='${{ steps.leer_variables.outputs.schema }}'")
-          EXISTE=$(psql -h ${{ secrets.PGHOST }}                        -p ${{ secrets.PGPORT }}                        -U ${{ secrets.PGUSER }}                        -d ${{ secrets.PGDATABASE }}                        -tAc "SELECT 1 FROM information_schema.schemata WHERE schema_name='${{ steps.leer_variables.outputs.schema }}'")
           if [ "$EXISTE" != "1" ]; then
             echo "❌ El esquema '${{ steps.leer_variables.outputs.schema }}' no existe"
             exit 1
@@ -79,5 +72,3 @@ jobs:
         run: |
           echo "🚀 Ejecutando el script src/${{ steps.leer_variables.outputs.script }}"
           psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -v schema=${{ steps.leer_variables.outputs.schema }} -f "src/${{ steps.leer_variables.outputs.script }}"
-          echo "🚀 Ejecutando el script ${{ steps.leer_variables.outputs.script }}"
-          psql -h ${{ secrets.PGHOST }}                -p ${{ secrets.PGPORT }}                -U ${{ secrets.PGUSER }}                -d ${{ secrets.PGDATABASE }}                -v schema=${{ steps.leer_variables.outputs.schema }}                -f src/${{ steps.leer_variables.outputs.script }}
