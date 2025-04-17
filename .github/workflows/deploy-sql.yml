@@ -6,65 +6,74 @@ on:
       - main
       - development
     paths:
-      - 'src/instruccionesPRE.txt'
-      - 'src/*.sql'
-      - 'src/scripts*.txt'
+      - 'src/**/*.sql'
+      - 'src/*.txt'
+      - '.github/**/*.yml'
 
 jobs:
   execute-sql:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clonar el repo
+      - name: Clonar el repositorio
         uses: actions/checkout@v3
 
-      - name: Instalar cliente PostgreSQL
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Configurar Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Instalar cliente PostgreSQL y dependencias de IA
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          pip install openai
 
       - name: Establecer variables de entorno por rama
-        id: vars
+        id: variables
         run: |
-          if [[ "${GITHUB_REF##*/}" == "main" ]]; then
-            echo "entorno=PRO" >> $GITHUB_OUTPUT
+          if [ "${GITHUB_REF##*/}" = "main" ]; then
+            echo "host=${{ secrets.PGHOST_PRO }}" >> $GITHUB_OUTPUT
+            echo "user=${{ secrets.PGUSER_PRO }}" >> $GITHUB_OUTPUT
+            echo "password=${{ secrets.PGPASSWORD_PRO }}" >> $GITHUB_OUTPUT
+            echo "port=${{ secrets.PGPORT_PRO }}" >> $GITHUB_OUTPUT
+            echo "database=${{ secrets.PGDATABASE_PRO }}" >> $GITHUB_OUTPUT
             echo "script_file=scripts_pro.txt" >> $GITHUB_OUTPUT
+            echo "entorno=PRO" >> $GITHUB_OUTPUT
           else
-            echo "entorno=DEV" >> $GITHUB_OUTPUT
+            echo "host=${{ secrets.PGHOST_DEV }}" >> $GITHUB_OUTPUT
+            echo "user=${{ secrets.PGUSER_DEV }}" >> $GITHUB_OUTPUT
+            echo "password=${{ secrets.PGPASSWORD_DEV }}" >> $GITHUB_OUTPUT
+            echo "port=${{ secrets.PGPORT_DEV }}" >> $GITHUB_OUTPUT
+            echo "database=${{ secrets.PGDATABASE_DEV }}" >> $GITHUB_OUTPUT
             echo "script_file=scripts_dev.txt" >> $GITHUB_OUTPUT
+            echo "entorno=DEV" >> $GITHUB_OUTPUT
           fi
 
-      - name: Verificar carga de secrets (sin revelar datos)
+      - name: Ejecutar scripts listados (con autocorrección IA si falla)
         env:
-          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
-          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
-          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
-          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
-          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          echo "✔️ Secrets cargados para entorno: ${{ steps.vars.outputs.entorno }}"
-
-      - name: Probar conexión a la base de datos
-        env:
-          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
-          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
-          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
-          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
-          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
-        run: |
-          psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -c '\conninfo'
-
-      - name: Ejecutar scripts listados
-        env:
-          PGHOST: ${{ secrets[format('PGHOST_{0}', steps.vars.outputs.entorno)] }}
-          PGPORT: ${{ secrets[format('PGPORT_{0}', steps.vars.outputs.entorno)] }}
-          PGUSER: ${{ secrets[format('PGUSER_{0}', steps.vars.outputs.entorno)] }}
-          PGPASSWORD: ${{ secrets[format('PGPASSWORD_{0}', steps.vars.outputs.entorno)] }}
-          PGDATABASE: ${{ secrets[format('PGDATABASE_{0}', steps.vars.outputs.entorno)] }}
-        run: |
-          while IFS= read -r script; do
+          for script in $(cat src/${{ steps.variables.outputs.script_file }}); do
             echo "🚀 Ejecutando src/$script"
-            psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -f "src/$script"
-          done < "src/${{ steps.vars.outputs.script_file }}"
+            if ! PGPASSWORD=${{ steps.variables.outputs.password }} psql -h "${{ steps.variables.outputs.host }}" \
+                -p "${{ steps.variables.outputs.port }}" -U "${{ steps.variables.outputs.user }}" \
+                -d "${{ steps.variables.outputs.database }}" -f "src/$script"; then
 
-      - name: Notificación al finalizar
-        run: echo "✅ Despliegue completado con éxito en entorno ${{ steps.vars.outputs.entorno }}"
+              echo "⚠️ Error al ejecutar $script. Enviando a IA para corregir..."
+              python fix_sql.py --error "Error al ejecutar $script" --file "src/$script"
+
+              echo "🔁 Reintentando con src/${script%.sql}_fix.sql"
+              if PGPASSWORD=${{ steps.variables.outputs.password }} psql -h "${{ steps.variables.outputs.host }}" \
+                  -p "${{ steps.variables.outputs.port }}" -U "${{ steps.variables.outputs.user }}" \
+                  -d "${{ steps.variables.outputs.database }}" -f "src/${script%.sql}_fix.sql"; then
+                echo "🎯 ChatGPT corrigió el script y se ejecutó con éxito: ${script%.sql}_fix.sql"
+              else
+                echo "❌ El script corregido también falló: ${script%.sql}_fix.sql"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Finalización
+        run: echo "✅ Despliegue finalizado en entorno ${{ steps.variables.outputs.entorno }}"
 
