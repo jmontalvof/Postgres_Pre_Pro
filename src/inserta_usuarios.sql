@@ -1,6 +1,6 @@
 \set schema 'public'
 
-CREATE TABLE IF NOT EXISTS :schema.usuarios_demo (
+CEATE TABLE IF NOT EXISTS :schema.usuarios_demo (
     id SERIAL PRIMARY KEY,
     nombre TEXT,
     email TEXT
