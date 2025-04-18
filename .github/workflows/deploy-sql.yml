@@ -1,4 +1,4 @@
-name: "Postgres_Pre_Pro - SQL Deployment con IA"
+name: "Postgres_Pre_Pro - SQL Deployment"
 
 on:
   push:
@@ -6,9 +6,9 @@ on:
       - main
       - development
     paths:
-      - 'src/scripts*.txt'
-      - 'src/*.sql'
-      - '.github/workflows/deploy-sql.yml'
+      - 'src/**/*.sql'
+      - 'src/**/*.txt'
+      - '.github/**/*.yml'
 
 jobs:
   deploy:
@@ -23,33 +23,21 @@ jobs:
       - name: Establecer variables de entorno por rama
         id: variables
         run: |
-          if [ "${GITHUB_REF##*/}" = "main" ]; then
-            echo "host=${{ secrets.PGHOST_PRO }}" >> $GITHUB_OUTPUT
-            echo "user=${{ secrets.PGUSER_PRO }}" >> $GITHUB_OUTPUT
-            echo "password=${{ secrets.PGPASSWORD_PRO }}" >> $GITHUB_OUTPUT
-            echo "port=${{ secrets.PGPORT_PRO }}" >> $GITHUB_OUTPUT
-            echo "database=${{ secrets.PGDATABASE_PRO }}" >> $GITHUB_OUTPUT
-            echo "script_file=scripts_pro.txt" >> $GITHUB_OUTPUT
-            echo "entorno=PRO" >> $GITHUB_OUTPUT
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "host=${{ secrets.POSTGR_HOST_PRO }}" >> $GITHUB_OUTPUT
+            echo "user=${{ secrets.POSTGR_USER_PRO }}" >> $GITHUB_OUTPUT
+            echo "password=${{ secrets.POSTGR_PASSWORD_PRO }}" >> $GITHUB_OUTPUT
+            echo "port=${{ secrets.POSTGR_PORT_PRO }}" >> $GITHUB_OUTPUT
+            echo "database=${{ secrets.POSTGR_DATABASE_PRO }}" >> $GITHUB_OUTPUT
+            echo "script_file=scripts.txt" >> $GITHUB_OUTPUT
           else
-            echo "host=${{ secrets.PGHOST_DEV }}" >> $GITHUB_OUTPUT
-            echo "user=${{ secrets.PGUSER_DEV }}" >> $GITHUB_OUTPUT
-            echo "password=${{ secrets.PGPASSWORD_DEV }}" >> $GITHUB_OUTPUT
-            echo "port=${{ secrets.PGPORT_DEV }}" >> $GITHUB_OUTPUT
-            echo "database=${{ secrets.PGDATABASE_DEV }}" >> $GITHUB_OUTPUT
+            echo "host=${{ secrets.POSTGR_HOST_DEV }}" >> $GITHUB_OUTPUT
+            echo "user=${{ secrets.POSTGR_USER_DEV }}" >> $GITHUB_OUTPUT
+            echo "password=${{ secrets.POSTGR_PASSWORD_DEV }}" >> $GITHUB_OUTPUT
+            echo "port=${{ secrets.POSTGR_PORT_DEV }}" >> $GITHUB_OUTPUT
+            echo "database=${{ secrets.POSTGR_DATABASE_DEV }}" >> $GITHUB_OUTPUT
             echo "script_file=scripts_dev.txt" >> $GITHUB_OUTPUT
-            echo "entorno=DEV" >> $GITHUB_OUTPUT
           fi
-
-      - name: Probar conexión a la base de datos
-        run: |
-          echo "🔗 Conectando a ${{ steps.variables.outputs.host }} como ${{ steps.variables.outputs.user }}"
-          PGPASSWORD=${{ steps.variables.outputs.password }} \
-          psql -h "${{ steps.variables.outputs.host }}" \
-               -p "${{ steps.variables.outputs.port }}" \
-               -U "${{ steps.variables.outputs.user }}" \
-               -d "${{ steps.variables.outputs.database }}" \
-               -c '\conninfo'
 
       - name: Ejecutar scripts listados (con autocorrección IA si falla)
         env:
@@ -62,7 +50,7 @@ jobs:
                 -d "${{ steps.variables.outputs.database }}" -f "src/$script"; then
 
               echo "⚠️ Error al ejecutar $script. Enviando a IA para corregir..."
-              python3 fix_sql.py --error "Error en $script" --file "src/$script"
+              python fix_sql.py --error "Error al ejecutar $script" --file "src/$script"
 
               echo "🔁 Reintentando con src/${script%.sql}_fix.sql"
               if PGPASSWORD=${{ steps.variables.outputs.password }} psql -h "${{ steps.variables.outputs.host }}" \
@@ -75,6 +63,3 @@ jobs:
               fi
             fi
           done
-
-      - name: Finalizado
-        run: echo "✅ Workflow terminado correctamente para entorno ${{ steps.variables.outputs.entorno }}"
