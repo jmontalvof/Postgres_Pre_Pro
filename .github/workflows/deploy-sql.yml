@@ -1,4 +1,4 @@
-name: "Postgres_Pre_Pro - SQL Deployment"
+name: "Postgres_Pre_Pro - SQL Deployment con IA"
 
 on:
   push:
@@ -6,31 +6,19 @@ on:
       - main
       - development
     paths:
-      - 'src/**/*.sql'
-      - 'src/*.txt'
-      - '.github/**/*.yml'
+      - 'src/scripts*.txt'
+      - 'src/*.sql'
+      - '.github/workflows/deploy-sql.yml'
 
 jobs:
-  execute-sql:
+  deploy:
     runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/jmontalvof/postgres-ia-runner:latest
 
     steps:
       - name: Clonar el repositorio
         uses: actions/checkout@v3
-
-      - name: Verificar existencia del script IA
-        run: |
-             ls -la fix_sql.py
-             chmod +x fix_sql.py
-      - name: Configurar Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Instalar cliente PostgreSQL y dependencias de IA
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client
-          pip install openai
 
       - name: Establecer variables de entorno por rama
         id: variables
@@ -53,6 +41,16 @@ jobs:
             echo "entorno=DEV" >> $GITHUB_OUTPUT
           fi
 
+      - name: Probar conexión a la base de datos
+        run: |
+          echo "🔗 Conectando a ${{ steps.variables.outputs.host }} como ${{ steps.variables.outputs.user }}"
+          PGPASSWORD=${{ steps.variables.outputs.password }} \
+          psql -h "${{ steps.variables.outputs.host }}" \
+               -p "${{ steps.variables.outputs.port }}" \
+               -U "${{ steps.variables.outputs.user }}" \
+               -d "${{ steps.variables.outputs.database }}" \
+               -c '\conninfo'
+
       - name: Ejecutar scripts listados (con autocorrección IA si falla)
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -64,7 +62,7 @@ jobs:
                 -d "${{ steps.variables.outputs.database }}" -f "src/$script"; then
 
               echo "⚠️ Error al ejecutar $script. Enviando a IA para corregir..."
-              python fix_sql.py --error "Error al ejecutar $script" --file "src/$script"
+              python3 fix_sql.py --error "Error en $script" --file "src/$script"
 
               echo "🔁 Reintentando con src/${script%.sql}_fix.sql"
               if PGPASSWORD=${{ steps.variables.outputs.password }} psql -h "${{ steps.variables.outputs.host }}" \
@@ -78,6 +76,5 @@ jobs:
             fi
           done
 
-      - name: Finalización
-        run: echo "✅ Despliegue finalizado en entorno ${{ steps.variables.outputs.entorno }}"
-
+      - name: Finalizado
+        run: echo "✅ Workflow terminado correctamente para entorno ${{ steps.variables.outputs.entorno }}"
