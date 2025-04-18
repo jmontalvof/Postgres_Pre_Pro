@@ -14,7 +14,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/jmontalvof/postgres-ia-runner:latest
+      image: jmontalvof/postgres-ia-runner:latest
 
     steps:
       - name: Clonar el repositorio

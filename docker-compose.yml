@@ -1,0 +1,18 @@
+version: '3.9'
+
+services:
+  usuario-service:
+    build: ./usuario-service
+    environment:
+      - DATABASE_URL=postgresql://tu_usuario:tu_contraseña@host.docker.internal:5432/empresa
+    ports:
+      - "8001:80"
+    depends_on:
+      - empleado-service
+
+  empleado-service:
+    build: ./empleado-service
+    environment:
+      - DATABASE_URL=postgresql://tu_usuario:tu_contraseña@host.docker.internal:5432/empresa
+    ports:
+      - "8002:80"
