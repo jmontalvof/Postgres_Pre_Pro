@@ -1,42 +1,54 @@
-import os
 import openai
-import sys
-from dotenv import load_dotenv
+import os
+import argparse
 
-load_dotenv()
-
+# Cargar la API key desde el entorno
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-def corregir_sql(file_path):
-    with open(file_path, 'r') as f:
-        contenido = f.read()
-
+def corregir_sql(error_msg, sql_original):
     prompt = f"""
-Corrige el siguiente código SQL. Devuelve solo el SQL corregido sin comentarios adicionales ni explicación:
+Eres un asistente experto en SQL. Se ha producido el siguiente error al ejecutar el siguiente script:
 
-{contenido}
+--- ERROR ---
+{error_msg}
+
+--- SCRIPT ORIGINAL ---
+{sql_original}
+
+Corrige el script para que sea válido y funcional, manteniendo el propósito original. Devuelve solo el nuevo script SQL corregido, sin explicaciones ni comentarios.
 """
 
-    respuesta = openai.ChatCompletion.create(
+    response = openai.ChatCompletion.create(
         model="gpt-4",
         messages=[
-            {"role": "system", "content": "Eres un experto en SQL que corrige errores de sintaxis."},
             {"role": "user", "content": prompt}
-        ],
-        temperature=0.2,
+        ]
     )
 
-    return respuesta.choices[0].message.content.strip()
+    return response.choices[0].message['content'].strip()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--error', required=True, help='Mensaje de error')
+    parser.add_argument('--file', required=True, help='Archivo SQL original')
+    args = parser.parse_args()
+
+    if not os.path.isfile(args.file):
+        print(f"❌ Archivo no encontrado: {args.file}")
+        return
+
+    with open(args.file, 'r') as f:
+        sql_original = f.read()
+
+    print("🔍 Enviando script con error al modelo GPT...")
+    script_corregido = corregir_sql(args.error, sql_original)
+
+    new_file = args.file.replace('.sql', '_fix.sql')
+    with open(new_file, 'w') as f:
+        f.write(script_corregido)
+
+    print(f"✅ Script corregido guardado en: {new_file}")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Uso: python fix_sql.py archivo_entrada.sql archivo_salida.sql")
-        sys.exit(1)
+    main()
 
-    entrada, salida = sys.argv[1], sys.argv[2]
-    sql_corregido = corregir_sql(entrada)
-
-    with open(salida, 'w') as f:
-        f.write(sql_corregido)
-
-    print(f"✅ SQL corregido guardado en {salida}")
