@@ -1,12 +1,12 @@
 from sqlfluff.core import Linter
 
-def validate_sql(path, dialect="postgres"):
-    linter = Linter(dialect=dialect)
+def validate_sql(path):
+    linter = Linter(dialect="postgres")
     result = linter.lint_path(path)
 
     errors = []
     for v in result.get_violations():
-	errors.append({"line": v.line_no, "message": v.desc()})
+        errors.append({"line": v.line_no, "message": v.desc()})
 
     with open(path, "r") as f:
         lines = f.readlines()
