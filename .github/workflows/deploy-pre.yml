@@ -1,4 +1,4 @@
-name: 🚀 Despliegue a Preproducción
+name: Despliegue a Preproducción
 
 on:
   workflow_dispatch:
