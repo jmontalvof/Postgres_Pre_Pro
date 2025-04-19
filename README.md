@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🚀 Flujo de Despliegue Controlado con GitHub Actions
 
 Este repositorio implementa un flujo CI/CD completo y profesional para gestionar scripts SQL y despliegues controlados en entornos de preproducción y producción, con uso de versiones por `tags`.
@@ -44,7 +43,6 @@ Se siguen buenas prácticas de versionado semántico:
 
 ```
 MAJOR.MINOR.PATCH  →  1.0.0, 1.1.2, 2.0.0
-=======
 
 # 📦 Postgres_Pre_Pro – Automatización de despliegue SQL
 
@@ -64,14 +62,11 @@ Postgres_Pre_Pro/
 │   ├── scripts_pro.txt          # Lista de scripts para entorno PRO
 │   ├── *.sql                    # Scripts SQL que se aplicarán en orden
 └── README.md
->>>>>>> main
-```
 
 Cada tag representa una versión validada y lista para ser trazada o recuperada si es necesario.
 
 ---
 
-<<<<<<< HEAD
 ## ✅ Ventajas del Modelo
 
 - Separación clara de entornos (pre y producción)
@@ -80,7 +75,6 @@ Cada tag representa una versión validada y lista para ser trazada o recuperada 
 - Seguridad y trazabilidad en cada paso del ciclo DevOps
 
 ---
-=======
 ## 🔁 Funcionamiento del flujo
 
 - Cada vez que se hace `push` sobre las ramas `main` o `development` que afecte archivos `.sql` o listas `.txt`, se activa el workflow.
