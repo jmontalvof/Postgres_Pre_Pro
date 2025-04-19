@@ -6,7 +6,7 @@ def validate_sql(path, dialect="postgres"):
 
     errors = []
     for v in result.get_violations():
-        errors.append({"line": v.line_no, "message": v.desc()})
+	errors.append({"line": v.line_no, "message": v.desc()})
 
     with open(path, "r") as f:
         lines = f.readlines()
