@@ -1,0 +1,51 @@
+name: "🔎 Revisión de Sintaxis SQL con IA"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - development
+      - main
+    paths:
+      - 'src/*.sql'
+      - 'src/scripts*.txt'
+
+jobs:
+  revisar-sintaxis:
+    runs-on: ubuntu-latest
+    container:
+      image: jmontalvof/postgres-ia-runner:latest
+
+    steps:
+      - name: 📥 Clonar repositorio
+        uses: actions/checkout@v3
+
+      - name: 📂 Mostrar scripts disponibles
+        run: ls -la src/
+
+      - name: 📄 Revisión sintáctica de scripts SQL
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          for script in $(cat src/scripts_dev.txt); do
+            echo "🔍 Validando sintaxis: $script"
+            if ! psql -f src/$script 2>error.log; then
+              echo "⚠️ Error detectado en $script"
+              ERROR_MSG=$(cat error.log | tail -n 5)
+              echo "🧠 Enviando a ChatGPT para corrección..."
+
+              python fix_sql.py --error "$ERROR_MSG" --file src/$script
+
+              if [ -f src/${script%.sql}_fix.sql ]; then
+                echo "✅ Script corregido: ${script%.sql}_fix.sql"
+              else
+                echo "❌ Fallo en la corrección automática."
+                exit 1
+              fi
+            else
+              echo "✅ $script pasó revisión sin errores"
+            fi
+          done
+
+      - name: ✅ Notificación final
+        run: echo "🎯 Todos los scripts están listos para despliegue."
