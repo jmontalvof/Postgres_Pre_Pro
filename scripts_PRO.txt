@@ -1,1 +1,3 @@
-src/script1.sql
+crear_tabla_usuarios.sql
+inserta_usuarios.sql
+actualiza_usuarios.sql

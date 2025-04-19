@@ -17,45 +17,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Clonar el repositorio
+      - name: Checkout del repositorio
         uses: actions/checkout@v3
 
-      - name: Instalar Python y dependencias
+      - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
           pip install sqlfluff
 
       - name: Validar sintaxis de scripts listados
         run: |
-          SCRIPT_FILE="scripts_dev.txt"
-
+          SCRIPT_FILE="scripts_DEV.txt"
           if [[ "${GITHUB_REF##*/}" == "main" ]]; then
-            SCRIPT_FILE="scripts_pro.txt"
+            SCRIPT_FILE="scripts_PRO.txt"
           fi
 
-          echo "🔍 Validando sintaxis de scripts listados en $SCRIPT_FILE"
-
+          echo "🔍 Validando sintaxis de los scripts en $SCRIPT_FILE"
           if [ ! -f "$SCRIPT_FILE" ]; then
             echo "❌ No se encontró el archivo: $SCRIPT_FILE"
             exit 1
           fi
 
           errores=0
-
           while IFS= read -r script || [ -n "$script" ]; do
-            if [ ! -f "src/$script" ]; then
-              echo "❌ Script no encontrado: src/$script"
+            if [ ! -f "$script" ]; then
+              echo "❌ Script no encontrado: $script"
               errores=$((errores+1))
               continue
             fi
 
-            echo "🔎 Analizando src/$script..."
-            sqlfluff lint "src/$script"
+            echo "🔎 Validando $script..."
+            sqlfluff lint "$script"
             if [ $? -ne 0 ]; then
-              echo "❌ Errores de sintaxis en: src/$script"
+              echo "❌ Errores de sintaxis en $script"
               errores=$((errores+1))
             else
-              echo "✅ Sintaxis correcta: src/$script"
+              echo "✅ Sintaxis válida: $script"
             fi
           done < "$SCRIPT_FILE"
 
