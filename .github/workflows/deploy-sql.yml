@@ -1,5 +1,5 @@
 
-name: Desplegar scripts SQL con autocorrección IA
+name: Desplegar scripts SQL
 
 on:
   push:
@@ -14,63 +14,23 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    container:
-      image: jmontalvof/postgres-ia-runner:latest
-      options: --entrypoint ""
 
     steps:
-      - name: Clonar el repositorio
+      - name: Checkout del repositorio
         uses: actions/checkout@v3
 
-      - name: Cargar variables de entorno
-        id: variables
+      - name: Instalar dependencias
         run: |
-          if [ "${GITHUB_REF##*/}" = "main" ]; then
-            echo "entorno=PRO" >> $GITHUB_OUTPUT
-            echo "script_file=scripts_pro.txt" >> $GITHUB_OUTPUT
-            echo "host=${{ secrets.PGHOST_PRO }}" >> $GITHUB_OUTPUT
-            echo "user=${{ secrets.PGUSER_PRO }}" >> $GITHUB_OUTPUT
-            echo "password=${{ secrets.PGPASSWORD_PRO }}" >> $GITHUB_OUTPUT
-            echo "port=${{ secrets.PGPORT_PRO }}" >> $GITHUB_OUTPUT
-            echo "database=${{ secrets.PGDATABASE_PRO }}" >> $GITHUB_OUTPUT
-          else
-            echo "entorno=DEV" >> $GITHUB_OUTPUT
-            echo "script_file=scripts_dev.txt" >> $GITHUB_OUTPUT
-            echo "host=${{ secrets.PGHOST_DEV }}" >> $GITHUB_OUTPUT
-            echo "user=${{ secrets.PGUSER_DEV }}" >> $GITHUB_OUTPUT
-            echo "password=${{ secrets.PGPASSWORD_DEV }}" >> $GITHUB_OUTPUT
-            echo "port=${{ secrets.PGPORT_DEV }}" >> $GITHUB_OUTPUT
-            echo "database=${{ secrets.PGDATABASE_DEV }}" >> $GITHUB_OUTPUT
-          fi
+          sudo apt update
+          sudo apt install -y postgresql-client
+          pip install -r requirements.txt
 
-      - name: Ejecutar scripts con autocorrección si falla
+      - name: Ejecutar flujo principal
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          mkdir -p logs
-          while IFS= read -r script || [ -n "$script" ]; do
-            if [ ! -f "src/$script" ]; then
-              echo "❌ Script no encontrado: src/$script"
-              exit 1
-            fi
-
-            echo "🚀 Ejecutando src/$script"
-            if ! PGPASSWORD=${{ steps.variables.outputs.password }} psql -h "${{ steps.variables.outputs.host }}"                 -p "${{ steps.variables.outputs.port }}" -U "${{ steps.variables.outputs.user }}"                 -d "${{ steps.variables.outputs.database }}" -f "src/$script"; then
-
-              echo "🔁 Reintentando con src/${script%.sql}_fix.sql"
-              if [ ! -f "src/${script%.sql}_fix.sql" ]; then
-                echo "❌ Script corregido no encontrado: src/${script%.sql}_fix.sql"
-                exit 1
-              fi
-
-              if PGPASSWORD=${{ steps.variables.outputs.password }} psql -h "${{ steps.variables.outputs.host }}"                   -p "${{ steps.variables.outputs.port }}" -U "${{ steps.variables.outputs.user }}"                   -d "${{ steps.variables.outputs.database }}" -f "src/${script%.sql}_fix.sql"; then
-                echo "🎯 Script corregido ejecutado con éxito: ${script%.sql}_fix.sql"
-                echo "${script%.sql}_fix.sql - CORREGIDO OK" >> logs/scripts_ejecutados_${{ steps.variables.outputs.entorno }}.log
-              else
-                echo "❌ Falló incluso con el script corregido: ${script%.sql}_fix.sql"
-                exit 1
-              fi
-            else
-              echo "$script - OK" >> logs/scripts_ejecutados_${{ steps.variables.outputs.entorno }}.log
-            fi
-          done < ${{ steps.variables.outputs.script_file }}
+          DB_NAME: ${{ github.ref == 'refs/heads/main' && secrets.PGDATABASE_PRO || secrets.PGDATABASE_DEV }}
+          DB_USER: ${{ github.ref == 'refs/heads/main' && secrets.PGUSER_PRO || secrets.PGUSER_DEV }}
+          DB_PASSWORD: ${{ github.ref == 'refs/heads/main' && secrets.PGPASSWORD_PRO || secrets.PGPASSWORD_DEV }}
+          DB_HOST: ${{ github.ref == 'refs/heads/main' && secrets.PGHOST_PRO || secrets.PGHOST_DEV }}
+          DB_PORT: ${{ github.ref == 'refs/heads/main' && secrets.PGPORT_PRO || secrets.PGPORT_DEV }}
+          GITHUB_REF: ${{ github.ref }}
+        run: python main.py

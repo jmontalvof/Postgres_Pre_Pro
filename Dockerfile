@@ -24,4 +24,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Comando por defecto (puede ser sobreescrito por GitHub Actions)
-CMD ["tail", "-f", "/dev/null"]
+CMD ["bash"]
