@@ -1,5 +1,0 @@
-src/crear_tabla_usuarios.sql
-src/borra_usuario.sql
-src/inserta_usuarios.sql
-src/actualiza_usuarios.sql
-src/script_con_errores.sql
