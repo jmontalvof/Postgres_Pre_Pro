@@ -22,14 +22,6 @@ jobs:
       - name: Clonar el repositorio
         uses: actions/checkout@v3
 
-      - name: Validar existencia de fix_sql.py
-        run: |
-          if [ ! -f fix_sql.py ]; then
-            echo "❌ No se encontró fix_sql.py"
-            exit 1
-          fi
-          chmod +x fix_sql.py
-
       - name: Cargar variables de entorno
         id: variables
         run: |
@@ -64,9 +56,6 @@ jobs:
 
             echo "🚀 Ejecutando src/$script"
             if ! PGPASSWORD=${{ steps.variables.outputs.password }} psql -h "${{ steps.variables.outputs.host }}"                 -p "${{ steps.variables.outputs.port }}" -U "${{ steps.variables.outputs.user }}"                 -d "${{ steps.variables.outputs.database }}" -f "src/$script"; then
-
-              echo "⚠️ Error al ejecutar $script. Enviando a IA para corregir..."
-              python fix_sql.py --error "Error al ejecutar $script" --file "src/$script"
 
               echo "🔁 Reintentando con src/${script%.sql}_fix.sql"
               if [ ! -f "src/${script%.sql}_fix.sql" ]; then
