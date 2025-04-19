@@ -1,4 +1,3 @@
-
 name: Desplegar scripts SQL
 
 on:
@@ -32,3 +31,60 @@ jobs:
           DB_PORT: ${{ github.ref == 'refs/heads/main' && secrets.PGPORT_PRO || secrets.PGPORT_DEV }}
           GITHUB_REF: ${{ github.ref }}
         run: python main.py
+=======
+name: "Postgres_Pre_Pro - SQL Deployment"
+
+on:
+  push:
+    branches:
+      - main
+      - development
+    paths:
+      - 'src/*.sql'
+      - 'src/scripts*.txt'
+
+jobs:
+  execute-sql:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar el repo
+        uses: actions/checkout@v3
+
+      - name: Instalar cliente PostgreSQL
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Establecer variables de entorno por rama
+        run: |
+          if [[ "${GITHUB_REF##*/}" == "main" ]]; then
+            echo "host=${{ secrets.PGHOST_PRO }}" >> $GITHUB_ENV
+            echo "user=${{ secrets.PGUSER_PRO }}" >> $GITHUB_ENV
+            echo "password=${{ secrets.PGPASSWORD_PRO }}" >> $GITHUB_ENV
+            echo "port=${{ secrets.PGPORT_PRO }}" >> $GITHUB_ENV
+            echo "database=${{ secrets.PGDATABASE_PRO }}" >> $GITHUB_ENV
+            echo "script_file=scripts_pro.txt" >> $GITHUB_ENV
+            echo "entorno=PRO" >> $GITHUB_ENV
+          else
+            echo "host=${{ secrets.PGHOST_DEV }}" >> $GITHUB_ENV
+            echo "user=${{ secrets.PGUSER_DEV }}" >> $GITHUB_ENV
+            echo "password=${{ secrets.PGPASSWORD_DEV }}" >> $GITHUB_ENV
+            echo "port=${{ secrets.PGPORT_DEV }}" >> $GITHUB_ENV
+            echo "database=${{ secrets.PGDATABASE_DEV }}" >> $GITHUB_ENV
+            echo "script_file=scripts_dev.txt" >> $GITHUB_ENV
+            echo "entorno=DEV" >> $GITHUB_ENV
+          fi
+
+      - name: Probar conexión a la base de datos
+        run: |
+          echo "🔗 Conectando a $database en entorno $entorno"
+          PGPASSWORD=$password psql -h "$host" -p "$port" -U "$user" -d "$database" -c '\conninfo'
+
+      - name: Ejecutar scripts listados
+        run: |
+          while IFS= read -r script; do
+            echo "🚀 Ejecutando src/$script"
+            PGPASSWORD=$password psql -h "$host" -p "$port" -U "$user" -d "$database" -f "src/$script"
+          done < "src/$script_file"
+
+      - name: Notificación al finalizar
+        run: echo "✅ Despliegue completado con éxito en entorno $entorno"
