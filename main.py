@@ -1,4 +1,3 @@
-
 import os
 from sql_validator import validate_sql
 from executor import execute_sql
