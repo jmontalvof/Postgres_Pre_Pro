@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+limpiar_postgres_pre_pro.sh
 
 # Entorno virtual
 venv/
