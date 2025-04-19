@@ -1,4 +1,3 @@
-
 from sqlfluff.core import Linter
 
 def validate_sql(path):
