@@ -1,7 +1,7 @@
 from sqlfluff.core import Linter
 
 def validate_sql(path):
-    linter = Linter(dialect="postgres")  # Dialecto especificado para evitar error
+    linter = Linter(dialect="postgres")  # Forzamos el dialecto aquí directamente
     result = linter.lint_path(path)
 
     errors = []
