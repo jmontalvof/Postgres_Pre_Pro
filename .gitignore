@@ -1,1 +1,19 @@
+# Archivos Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Entorno virtual
+venv/
 .env
+
+# Archivos del sistema
+.DS_Store
+
+# Archivos temporales
+*.log
+*.bak
+
+# Archivos de Docker que no quieras subir (opcionales)
+docker-compose.override.yml

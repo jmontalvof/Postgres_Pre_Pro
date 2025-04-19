@@ -1,0 +1,9 @@
+# Archivos que no se necesitan dentro del contenedor
+.git/
+.github/
+.gitignore
+*.md
+*.DS_Store
+__pycache__/
+*.pyc
+.env
