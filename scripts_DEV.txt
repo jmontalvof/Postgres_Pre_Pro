@@ -1,5 +1,5 @@
-crear_tabla_usuarios.sql
-borra_usuario.sql
-inserta_usuarios.sql
-actualiza_usuarios.sql
-script_con_errores.sql
+src/crear_tabla_usuarios.sql
+src/borra_usuario.sql
+src/inserta_usuarios.sql
+src/actualiza_usuarios.sql
+src/script_con_errores.sql
