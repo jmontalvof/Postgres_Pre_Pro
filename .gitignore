@@ -18,3 +18,37 @@ venv/
 
 # Archivos de Docker que no quieras subir (opcionales)
 docker-compose.override.yml
+
+# Ignorar archivos del sistema y de usuario
+.DS_Store
+*.log
+*.swp
+*.swo
+*.tmp
+
+# Ignorar configuraciones y cachés personales
+.cache/
+.config/
+.aws/
+.android/
+.conda/
+.cocoapods/
+.continuum/
+.astro/
+.anaconda/
+.bash_history
+.bash_profile
+.bashrc
+.RData
+.Rapp.history
+.Rhistory
+
+# Ignorar cualquier cosa fuera del proyecto (protección por si git se inicializó arriba)
+../*
+!src/
+!.github/
+!.gitignore
+!*.py
+!*.txt
+!Dockerfile
+!requirements.txt

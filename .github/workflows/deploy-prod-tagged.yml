@@ -1,0 +1,50 @@
+name: Desplegar Producción desde Tag
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Ejecutar sólo cuando se haga push de un tag tipo v1.0.0
+
+jobs:
+  deploy:
+    name: Desplegar en Producción desde tag
+    runs-on: ubuntu-latest
+    environment:
+      name: produccion
+
+    steps:
+      - name: 💾 Clonar repo desde tag
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # necesario para obtener los tags
+
+      - name: 📉 Instalar PostgreSQL client y dependencias Python
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          pip install -r requirements.txt
+
+      - name: 🔍 Validar archivo scripts_PRO.txt
+        run: |
+          if [ ! -f scripts_PRO.txt ]; then
+            echo "❌ No se encontró scripts_PRO.txt"
+            exit 1
+          fi
+          if [ ! -s scripts_PRO.txt ]; then
+            echo "❌ scripts_PRO.txt está vacío"
+            exit 1
+          fi
+
+      - name: ✨ Ejecutar main.py
+        env:
+          DB_NAME: ${{ secrets.PGDATABASE_PRO }}
+          DB_USER: ${{ secrets.PGUSER_PRO }}
+          DB_PASSWORD: ${{ secrets.PGPASSWORD_PRO }}
+          DB_HOST: ${{ secrets.PGHOST_PRO }}
+          DB_PORT: ${{ secrets.PGPORT_PRO }}
+          GITHUB_REF: ${{ github.ref }}
+        run: python main.py
+
+      - name: 🎉 Finalizado
+        run: echo "🌟 Despliegue a Producción desde tag ejecutado correctamente."
+

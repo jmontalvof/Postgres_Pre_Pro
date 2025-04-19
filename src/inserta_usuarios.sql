@@ -1,3 +1,4 @@
+INSERT INTO usuarios (nombre) VALUES ('Luis'), ('Ana'), ('Carlos');
 \set schema 'public'
 
 CEATE TABLE IF NOT EXISTS :schema.usuarios_demo (

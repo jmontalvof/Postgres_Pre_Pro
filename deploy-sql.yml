@@ -1,0 +1,36 @@
+
+name: Desplegar scripts SQL
+
+on:
+  push:
+    branches:
+      - main
+      - development
+    paths:
+      - 'src/*.sql'
+      - '*.txt'
+      - '.github/workflows/deploy-sql.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v3
+
+      - name: Instalar dependencias necesarias
+        run: |
+          sudo apt update
+          sudo apt install -y postgresql-client
+          pip install --no-cache-dir -r requirements.txt
+
+      - name: Ejecutar flujo principal
+        env:
+          DB_NAME: ${{ github.ref == 'refs/heads/main' && secrets.PGDATABASE_PRO || secrets.PGDATABASE_DEV }}
+          DB_USER: ${{ github.ref == 'refs/heads/main' && secrets.PGUSER_PRO || secrets.PGUSER_DEV }}
+          DB_PASSWORD: ${{ github.ref == 'refs/heads/main' && secrets.PGPASSWORD_PRO || secrets.PGPASSWORD_DEV }}
+          DB_HOST: ${{ github.ref == 'refs/heads/main' && secrets.PGHOST_PRO || secrets.PGHOST_DEV }}
+          DB_PORT: ${{ github.ref == 'refs/heads/main' && secrets.PGPORT_PRO || secrets.PGPORT_DEV }}
+          GITHUB_REF: ${{ github.ref }}
+        run: python main.py
