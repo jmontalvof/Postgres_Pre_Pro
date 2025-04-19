@@ -1,0 +1,57 @@
+name: Desplegar a Producción
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a desplegar (ej: 1.0.0)'
+        required: true
+      comentario:
+        description: '¿Qué se está desplegando?'
+        required: false
+
+jobs:
+  deploy:
+    name: Desplegar en Producción
+    runs-on: ubuntu-latest
+    environment:
+      name: produccion
+      url: https://miaplicacion.com  # (Opcional: URL del entorno prod)
+
+    steps:
+      - name: 📦 Checkout del repositorio
+        uses: actions/checkout@v3
+
+      - name: 🧱 Instalar cliente PostgreSQL y dependencias Python
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          pip install -r requirements.txt
+
+      - name: 🚦 Validar existencia del archivo de scripts
+        run: |
+          if [ ! -f scripts_PRO.txt ]; then
+            echo "❌ El archivo scripts_PRO.txt no existe."
+            exit 1
+          fi
+
+          if [ ! -s scripts_PRO.txt ]; then
+            echo "❌ El archivo scripts_PRO.txt está vacío. No hay scripts que ejecutar."
+            exit 1
+          fi
+
+      - name: 🧠 Ejecutar validación y despliegue
+        env:
+          DB_NAME: ${{ secrets.PGDATABASE_PRO }}
+          DB_USER: ${{ secrets.PGUSER_PRO }}
+          DB_PASSWORD: ${{ secrets.PGPASSWORD_PRO }}
+          DB_HOST: ${{ secrets.PGHOST_PRO }}
+          DB_PORT: ${{ secrets.PGPORT_PRO }}
+          GITHUB_REF: refs/heads/main
+        run: |
+          echo "🚀 Versión: ${{ github.event.inputs.version }}"
+          echo "📝 Comentario: ${{ github.event.inputs.comentario }}"
+          python main.py
+
+      - name: ✅ Finalizado
+        run: echo "🎉 Despliegue a producción completado exitosamente."
