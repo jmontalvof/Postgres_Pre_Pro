@@ -1,100 +1,59 @@
+# 🚀 Flujo de Despliegue Controlado con GitHub Actions
 
-# 🚀 Postgres_Pre_Pro
-
-Este proyecto automatiza el despliegue de scripts SQL a bases de datos PostgreSQL, utilizando GitHub Actions, validación de sintaxis con `sqlfluff` y ejecución controlada por entorno (`DEV` o `PRO`).
+Este repositorio implementa un flujo CI/CD completo y profesional para gestionar scripts SQL y despliegues controlados en entornos de preproducción y producción, con uso de versiones por `tags`.
 
 ---
 
-## 📂 Estructura del repositorio
+## 🧱 Estructura del Flujo
+
+### 1. Despliegue a Preproducción (`deploy-pre.yml`)
+- Se lanza manualmente desde la pestaña **Actions**
+- Requiere ingresar:
+  - Versión (ej: `1.0.0`)
+  - Comentario (opcional)
+- Valida que `scripts_DEV.txt` exista y tenga contenido
+- Ejecuta los scripts en la base de datos de desarrollo/preproducción
+- Crea automáticamente el tag con la versión ingresada (`git tag 1.0.0`)
+
+📂 Ubicación: `.github/workflows/deploy-pre.yml`
+
+---
+
+### 2. Validación final (opcional)
+- Se puede revisar el resultado de la ejecución en los logs de Actions
+- Si todo fue exitoso, se considera el tag como **validado para Producción**
+
+---
+
+### 3. Despliegue a Producción (`deploy-pro.yml`)
+- También se lanza manualmente desde **Actions**
+- Solicita el nombre del **tag aprobado**
+- Clona el repositorio desde ese tag exacto
+- Valida `scripts_PRO.txt`
+- Requiere aprobación manual mediante el entorno `produccion`
+- Ejecuta los scripts en la base de datos de Producción
+
+📂 Ubicación: `.github/workflows/deploy-pro.yml`
+
+---
+
+## 🏷️ Versionado con Tags
+
+Se siguen buenas prácticas de versionado semántico:
 
 ```
-Postgres_Pre_Pro/
-├── .github/workflows/
-│   └── deploy-sql.yml        # Flujo GitHub Actions que valida y ejecuta
-├── src/                      # Carpeta con los scripts .sql
-│   ├── crear_tabla_usuarios.sql
-│   └── inserta_usuarios.sql
-├── scripts_DEV.txt           # Lista de scripts para entorno desarrollo
-├── scripts_PRO.txt           # Lista de scripts para entorno producción
-├── main.py                   # Lógica de validación y ejecución
-├── executor.py               # Ejecuta los scripts en la base de datos
-├── sql_validator.py          # Valida sintaxis SQL con sqlfluff
-├── requirements.txt          # Dependencias necesarias (sqlfluff, psycopg2, etc.)
-└── Dockerfile (opcional)     # Imagen personalizada (no se usa en producción)
+MAJOR.MINOR.PATCH  →  1.0.0, 1.1.2, 2.0.0
 ```
 
----
-
-## 🛠️ Requisitos
-
-- Tener configurados los **Secrets** en GitHub:
-
-### 🔐 Desarrollo (`development`)
-- `PGDATABASE_DEV`
-- `PGUSER_DEV`
-- `PGPASSWORD_DEV`
-- `PGHOST_DEV`
-- `PGPORT_DEV`
-
-### 🔐 Producción (`main`)
-- `PGDATABASE_PRO`
-- `PGUSER_PRO`
-- `PGPASSWORD_PRO`
-- `PGHOST_PRO`
-- `PGPORT_PRO`
+Cada tag representa una versión validada y lista para ser trazada o recuperada si es necesario.
 
 ---
 
-## ⚙️ ¿Cómo funciona?
+## ✅ Ventajas del Modelo
 
-### Al hacer `push` a `main` o `development`:
-1. Se activa el flujo `deploy-sql.yml`
-2. Se instala `psycopg2`, `sqlfluff` y `postgresql-client`
-3. Se carga el archivo de scripts (`scripts_PRO.txt` o `scripts_DEV.txt`)
-4. Se valida cada archivo `.sql` con `sqlfluff`
-5. Si tiene errores:
-   - ❌ Se muestra el mensaje de error con línea y detalle
-   - 🚫 No se ejecuta
-6. Si todo es válido:
-   - ✅ Se ejecuta en la base de datos PostgreSQL usando `psql`
-
----
-
-## 🧪 Casos controlados
-
-- ❌ `scripts_DEV.txt` vacío → el flujo se detiene con mensaje
-- ❌ `scripts_DEV.txt` no existe → el flujo se detiene con mensaje
-- ❌ Error de sintaxis en SQL → se muestra línea y detalle
-- ✅ Script válido → se ejecuta automáticamente
-
----
-
-## 💡 Ejemplo de `scripts_DEV.txt`
-
-```
-src/crear_tabla_usuarios.sql
-src/inserta_usuarios.sql
-```
-
----
-
-## 📦 Instalación local (opcional)
-
-```bash
-pip install -r requirements.txt
-python main.py
-```
-
----
-
-## 📌 Notas
-
-- La imagen Docker `postgres-ia-runner` fue creada, pero finalmente no se utilizó en GitHub Actions por problemas de estabilidad. Se optó por ejecución directa en `ubuntu-latest`.
-
----
-
-## 👨‍💻 Autor
-
-Jorge Montalvo – [jmontalvof@outlook.es](mailto:jmontalvof@outlook.es)
+- Separación clara de entornos (pre y producción)
+- Revisión manual antes del despliegue en producción
+- Histórico claro de versiones desplegadas
+- Seguridad y trazabilidad en cada paso del ciclo DevOps
 
 ---

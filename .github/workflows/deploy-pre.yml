@@ -1,0 +1,56 @@
+name: 🚀 Despliegue manual a Preproducción
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a desplegar (ej: 1.0.0)'
+        required: true
+      comentario:
+        description: '¿Qué se está desplegando?'
+        required: false
+
+jobs:
+  deploy:
+    name: Desplegar en Preproducción
+    runs-on: ubuntu-latest
+    environment:
+      name: preproduccion
+
+    steps:
+      - name: 🔁 Clonar repositorio
+        uses: actions/checkout@v3
+
+      - name: ⚙️ Instalar dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          pip install -r requirements.txt
+
+      - name: 📋 Validar existencia de scripts_DEV.txt
+        run: |
+          if [ ! -f scripts_DEV.txt ]; then
+            echo "❌ El archivo scripts_DEV.txt no existe."
+            exit 1
+          fi
+          if [ ! -s scripts_DEV.txt ]; then
+            echo "❌ El archivo scripts_DEV.txt está vacío."
+            exit 1
+          fi
+
+      - name: 🚀 Ejecutar scripts validados
+        env:
+          DB_NAME: ${{ secrets.PGDATABASE_DEV }}
+          DB_USER: ${{ secrets.PGUSER_DEV }}
+          DB_PASSWORD: ${{ secrets.PGPASSWORD_DEV }}
+          DB_HOST: ${{ secrets.PGHOST_DEV }}
+          DB_PORT: ${{ secrets.PGPORT_DEV }}
+          GITHUB_REF: refs/heads/development
+        run: python main.py
+
+      - name: 🏷️ Crear y subir tag con la versión desplegada
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}
