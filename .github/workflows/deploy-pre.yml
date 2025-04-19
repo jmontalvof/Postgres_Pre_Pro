@@ -1,4 +1,4 @@
-name: 🚀 Despliegue manual a Preproducción
+name: 🚀 Despliegue a Preproducción
 
 on:
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
       name: preproduccion
 
     steps:
-      - name: 🔁 Clonar repositorio
+      - name: 🔁 Clonar el repositorio
         uses: actions/checkout@v3
 
       - name: ⚙️ Instalar dependencias
@@ -27,7 +27,7 @@ jobs:
           sudo apt-get install -y postgresql-client
           pip install -r requirements.txt
 
-      - name: 📋 Validar existencia de scripts_DEV.txt
+      - name: 📋 Validar existencia y contenido de scripts_DEV.txt
         run: |
           if [ ! -f scripts_DEV.txt ]; then
             echo "❌ El archivo scripts_DEV.txt no existe."
@@ -38,7 +38,7 @@ jobs:
             exit 1
           fi
 
-      - name: 🚀 Ejecutar scripts validados
+      - name: 🚀 Ejecutar main.py
         env:
           DB_NAME: ${{ secrets.PGDATABASE_DEV }}
           DB_USER: ${{ secrets.PGUSER_DEV }}
