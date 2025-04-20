@@ -1,2 +1,2 @@
-src/crear_tabla_usuarios.sql
-src/inserta_usuarios.sql
+inserta_usuario_demo.sql
+actualiza_usuario_demo.sql
