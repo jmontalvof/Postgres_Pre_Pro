@@ -21,8 +21,9 @@ def main():
         exit(1)
 
     for script in scripts:
-        print(f"🔍 Validando: {script}")
-        is_valid, errors, line_count = validate_sql(script)
+        script_path = os.path.join("src", script)
+        print(f"🔍 Validando: {script_path}")
+        is_valid, errors, line_count = validate_sql(script_path)
 
         if not is_valid:
             print("❌ Errores encontrados:")
@@ -31,7 +32,7 @@ def main():
             return
 
         print("✅ Sintaxis válida. Ejecutando...")
-        execute_sql(script)
+        execute_sql(script_path)
 
 if __name__ == "__main__":
     main()

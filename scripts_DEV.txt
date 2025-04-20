@@ -1,2 +1,2 @@
-src/inserta_usuario_demo.sql
-src/actualiza_usuario_demo.sql
+inserta_usuario_demo.sql
+actualiza_usuario_demo.sql
