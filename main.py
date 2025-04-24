@@ -47,7 +47,7 @@ def main():
         "port": os.getenv("DB_PORT")
     }
 
-    script_file = "src/scripts_dev.txt" if "Pre" in entorno else "src/scripts_PRO.txt"
+    script_file = "src/scripts_DEV.txt" if "Pre" in entorno else "src/scripts_PRO.txt"
 
     try:
         conn = psycopg2.connect(**db_params)
