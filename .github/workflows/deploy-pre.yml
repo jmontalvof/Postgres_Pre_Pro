@@ -1,54 +1,33 @@
-name: Desplegar a Preproducción desde Tag
+name: Desplegar a Preproducción
 
 on:
   workflow_dispatch:
-    inputs:
-      comentario:
-        description: "Comentario del despliegue"
-        required: false
 
 jobs:
-  deploy:
-    name: Desplegar en Preproducción desde Tag
+  deploy-pre:
+    name: Despliegue en Preproducción
     runs-on: ubuntu-latest
-    environment:
-      name: preproduccion
 
     steps:
-      - name: 🔁 Checkout con tags
+      - name: 📦 Clonar repositorio
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Necesario para crear tags
 
-      - name: 🏷️ Generar nuevo tag (Pre)
-        id: versioning
+      - name: 🔍 Obtener versión del pom.xml
+        id: version
         run: |
-          ultimo_tag=$(git tag --sort=-v:refname | grep '^pre-v' | tail -n 1)
-          echo "Último tag: $ultimo_tag"
-          if [[ "$ultimo_tag" =~ ^pre-v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
-            major=${BASH_REMATCH[1]}
-            minor=${BASH_REMATCH[2]}
-            patch=${BASH_REMATCH[3]}
-            nueva_version="pre-v$major.$minor.$((patch+1))"
-          else
-            nueva_version="pre-v1.0.0"
-          fi
-          echo "version=$nueva_version" >> $GITHUB_OUTPUT
+          sudo apt-get update && sudo apt-get install -y libxml2-utils
+          version=$(xmllint --xpath "string(//project/version)" pom.xml)
+          echo "🔖 Versión detectada: $version"
+          echo "version=$version" >> $GITHUB_OUTPUT
 
-      - name: 🏷️ Crear y subir tag
+      - name: 🧱 Instalar dependencias
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git tag -a ${{ steps.versioning.outputs.version }} -m "${{ github.event.inputs.comentario || 'Tag pre generado automáticamente' }}"
-          git push origin ${{ steps.versioning.outputs.version }}
-
-      - name: ⚙️ Instalar dependencias
-        run: |
-          sudo apt-get update
           sudo apt-get install -y postgresql-client
           pip install -r requirements.txt
 
-      - name: 🚀 Desplegar en entorno Preproducción
+      - name: 🚀 Desplegar scripts en Pre
         env:
           DB_NAME: ${{ secrets.PGDATABASE_DEV }}
           DB_USER: ${{ secrets.PGUSER_DEV }}
@@ -56,3 +35,17 @@ jobs:
           DB_HOST: ${{ secrets.PGHOST_DEV }}
           DB_PORT: ${{ secrets.PGPORT_DEV }}
         run: python main.py
+
+      - name: 🏷️ Crear y subir tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag -a v${{ steps.version.outputs.version }} -m "Versión aprobada para producción"
+          git push origin v${{ steps.version.outputs.version }}
+
+      - name: 🚀 Lanzar despliegue a Producción desde Tag
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: despliegue-produccion-tag
+          client-payload: '{"tag": "v${{ steps.version.outputs.version }}"}'

@@ -1,10 +1,10 @@
-name: Crear Tag Aprobado
+name: Crear Tag Producción
 
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Número de versión aprobado (ej: 1.0.1)"
+        description: "Número de versión para producción (ej: 1.0.1)"
         required: true
       comentario:
         description: "Comentario sobre la versión"
@@ -12,7 +12,7 @@ on:
 
 jobs:
   crear-tag:
-    name: Crear y subir Tag
+    name: Crear y subir Tag Producción
     runs-on: ubuntu-latest
 
     steps:
@@ -26,7 +26,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          TAG_NAME="pre-v${{ github.event.inputs.version }}"
+          TAG_NAME="v${{ github.event.inputs.version }}"
           COMMENT="${{ github.event.inputs.comentario }}"
 
           if git rev-parse "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
