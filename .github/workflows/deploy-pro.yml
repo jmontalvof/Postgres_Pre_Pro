@@ -50,9 +50,9 @@ jobs:
 
       - name: 🚀 Ejecutar main.py
         env:
-          DB_NAME: ${{ secrets.PGDATABASE_PRO }}
-          DB_USER: ${{ secrets.PGUSER_PRO }}
-          DB_PASSWORD: ${{ secrets.PGPASSWORD_PRO }}
-          DB_HOST: ${{ secrets.PGHOST_PRO }}
-          DB_PORT: ${{ secrets.PGPORT_PRO }}
+          DB_NAME: ${{ secrets.PGDATABASE_PROD }}
+          DB_USER: ${{ secrets.PGUSER_PROD }}
+          DB_PASSWORD: ${{ secrets.PGPASSWORD_PROD }}
+          DB_HOST: ${{ secrets.PGHOST_PROD }}
+          DB_PORT: ${{ secrets.PGPORT_PROD }}
         run: python main.py
