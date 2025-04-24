@@ -3,9 +3,6 @@ name: Crear Tag Aprobado
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Número de versión aprobado (ej: 1.0.0)"
-        required: true
       comentario:
         description: "Comentario sobre la versión"
         required: false
@@ -16,16 +13,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: ↙️ Clonar repositorio
+      - name: ↙️ Clonar repositorio completo
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # importante para poder crear tags
+          fetch-depth: 0
 
-      - name: 📉 Crear tag localmente
+      - name: 🧱 Instalar xmllint
+        run: sudo apt-get update && sudo apt-get install -y libxml2-utils
+
+      - name: 🔖 Obtener versión desde pom.xml
+        id: version
+        run: |
+          version=$(xmllint --xpath "string(//project/version)" pom.xml)
+          echo "Versión encontrada: $version"
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: 🏷 Crear tag local
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag -a v${{ github.event.inputs.version }} -m "${{ github.event.inputs.comentario }}"
+          git tag -a v${{ steps.version.outputs.version }} -m "${{ github.event.inputs.comentario || 'Versión validada' }}"
 
-      - name: 📦 Subir tag al repositorio
-        run: git push origin v${{ github.event.inputs.version }}
+      - name: 🚀 Subir tag al repositorio
+        run: git push origin v${{ steps.version.outputs.version }}
