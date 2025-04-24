@@ -1,39 +1,25 @@
-name: Desplegar a Preproducción
+name: Desplegar en Preproducción
 
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: 'Versión a desplegar (ej: 1.0.0)'
+        required: true
       comentario:
-        description: 'Comentario de despliegue'
+        description: '¿Qué se está desplegando?'
         required: false
 
 jobs:
   deploy:
+    name: Desplegar en Preproducción
     runs-on: ubuntu-latest
+    environment:
+      name: preproduccion
+
     steps:
-      - name: 🔁 Checkout del repositorio
+      - name: 🔁 Clonar el repositorio
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: 🧩 Extraer versión desde pom.xml
-        id: version
-        run: |
-          version=$(xmllint --xpath "string(//project/version)" pom.xml)
-          echo "VERSION_EXTRAIDA=$version" >> $GITHUB_OUTPUT
-
-      - name: 🔖 Crear tag si no existe
-        run: |
-          git fetch --tags
-          if git rev-parse "v${{ steps.version.outputs.VERSION_EXTRAIDA }}" >/dev/null 2>&1; then
-            echo "⚠️ El tag v${{ steps.version.outputs.VERSION_EXTRAIDA }} ya existe."
-          else
-            git config user.name "github-actions"
-            git config user.email "github-actions@github.com"
-            git tag -a v${{ steps.version.outputs.VERSION_EXTRAIDA }} -m "${{ github.event.inputs.comentario }}"
-            git push origin v${{ steps.version.outputs.VERSION_EXTRAIDA }}
-            echo "✅ Tag v${{ steps.version.outputs.VERSION_EXTRAIDA }} creado."
-          fi
 
       - name: ⚙️ Instalar dependencias
         run: |
@@ -41,14 +27,30 @@ jobs:
           sudo apt-get install -y postgresql-client
           pip install -r requirements.txt
 
-      - name: 🚀 Desplegar en entorno Preproducción
+      - name: 📋 Validar existencia y contenido de scripts_DEV.txt
+        run: |
+          if [ ! -f scripts_DEV.txt ]; then
+            echo "❌ El archivo scripts_DEV.txt no existe."
+            exit 1
+          fi
+          if [ ! -s scripts_DEV.txt ]; then
+            echo "❌ El archivo scripts_DEV.txt está vacío."
+            exit 1
+          fi
+
+      - name: 🚀 Ejecutar main.py
         env:
-          DB_NAME: ${{ secrets.PGDATABASE_PRE }}
-          DB_USER: ${{ secrets.PGUSER_PRE }}
-          DB_PASSWORD: ${{ secrets.PGPASSWORD_PRE }}
-          DB_HOST: ${{ secrets.PGHOST_PRE }}
-          DB_PORT: ${{ secrets.PGPORT_PRE }}
+          DB_NAME: ${{ secrets.PGDATABASE_DEV }}
+          DB_USER: ${{ secrets.PGUSER_DEV }}
+          DB_PASSWORD: ${{ secrets.PGPASSWORD_DEV }}
+          DB_HOST: ${{ secrets.PGHOST_DEV }}
+          DB_PORT: ${{ secrets.PGPORT_DEV }}
+          GITHUB_REF: refs/heads/development
         run: python main.py
 
-      - name: ✅ Finalizado
-        run: echo "🎉 Despliegue a Preproducción finalizado con éxito."
+      - name: 🏷️ Crear y subir tag con la versión desplegada
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag ${{ github.event.inputs.version }}
+          git push origin ${{ github.event.inputs.version }}

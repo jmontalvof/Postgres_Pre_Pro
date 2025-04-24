@@ -1,4 +1,3 @@
-borra_usuario.sql
 inserta_usuario_demo.sql
 actualiza_usuario_demo.sql
 
