@@ -1,2 +1,1 @@
-inserta_usuario_demo.sql
-actualiza_usuario_demo.sql
+crear_tabla_empleados.sql

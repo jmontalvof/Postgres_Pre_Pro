@@ -1,0 +1,31 @@
+name: Promocionar a Producción
+
+on:
+  workflow_dispatch:
+    inputs:
+      comentario:
+        description: '¿Qué se está promocionando?'
+        required: false
+
+jobs:
+  merge-development-to-main:
+    name: Promocionar rama development a main
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🔁 Clonar el repositorio
+        uses: actions/checkout@v3
+        with:
+          ref: development
+          fetch-depth: 0  # Necesario para que el merge funcione correctamente
+
+      - name: 🧰 Configurar Git
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: 🔀 Hacer merge a main
+        run: |
+          git checkout main
+          git merge development -m "🚀 Promoción automática de development a main: ${{ github.event.inputs.comentario }}"
+          git push origin main
