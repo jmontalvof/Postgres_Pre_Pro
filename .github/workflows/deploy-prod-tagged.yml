@@ -1,15 +1,15 @@
-name: Desplegar Producción desde Tag
+name: Desplegar Producción desde Tag extraído del pom.xml
 
 on:
   workflow_dispatch:
     inputs:
-      tag:
-        description: 'Versión/tag a desplegar (ej: 1.0.5)'
-        required: true
+      comentario:
+        description: 'Comentario sobre el despliegue'
+        required: false
 
 jobs:
   deploy:
-    name: Desplegar en Producción desde Tag
+    name: Desplegar en Producción desde última versión del pom.xml
     runs-on: ubuntu-latest
     environment:
       name: produccion
@@ -18,7 +18,21 @@ jobs:
       - name: 🔁 Clonar el repositorio
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.event.inputs.tag }}
+          fetch-depth: 0  # Necesario para tags
+
+      - name: 🧩 Extraer versión desde pom.xml
+        id: version
+        run: |
+          version=$(grep -m1 '<version>' pom.xml | sed -E 's/.*<version>(.*)<\/version>.*/\1/')
+          echo "Versión encontrada: $version"
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: 🏷 Crear y subir tag automáticamente
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag -a v${{ steps.version.outputs.version }} -m "${{ github.event.inputs.comentario }}"
+          git push origin v${{ steps.version.outputs.version }}
 
       - name: ⚙️ Instalar dependencias
         run: |
@@ -28,10 +42,14 @@ jobs:
 
       - name: 🚀 Ejecutar main.py
         env:
-          DB_NAME: ${{ secrets.PGDATABASE_PRO }}
-          DB_USER: ${{ secrets.PGUSER_PRO }}
-          DB_PASSWORD: ${{ secrets.PGPASSWORD_PRO }}
-          DB_HOST: ${{ secrets.PGHOST_PRO }}
-          DB_PORT: ${{ secrets.PGPORT_PRO }}
+          DB_NAME: ${{ secrets.PGDATABASE_PROD }}
+          DB_USER: ${{ secrets.PGUSER_PROD }}
+          DB_PASSWORD: ${{ secrets.PGPASSWORD_PROD }}
+          DB_HOST: ${{ secrets.PGHOST_PROD }}
+          DB_PORT: ${{ secrets.PGPORT_PROD }}
           GITHUB_REF: refs/heads/main
         run: python main.py
+
+      - name: ✅ Finalizado
+        run: echo "🎉 Despliegue a producción completado exitosamente."
+
