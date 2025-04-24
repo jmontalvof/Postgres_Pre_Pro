@@ -19,13 +19,11 @@ jobs:
       - name: ↙️ Clonar repositorio
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # importante para poder crear tags
+          fetch-depth: 0
 
-      - name: 📉 Crear tag localmente
+      - name: 🏷️ Crear tag
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git tag -a v${{ github.event.inputs.version }} -m "${{ github.event.inputs.comentario }}"
-
-      - name: 📦 Subir tag al repositorio
-        run: git push origin v${{ github.event.inputs.version }}
+          git tag -a v${{ github.event.inputs.version }} -m "${{ github.event.inputs.comentario || 'Versión aprobada' }}"
+          git push origin v${{ github.event.inputs.version }}
