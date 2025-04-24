@@ -7,4 +7,4 @@ CREATE TABLE IF NOT EXISTS empleados (
 );
 
 -- Verificamos la creación
-SELECT * FROM empleados;
+SELECT identificacion, nombres, jornal FROM empleados;
