@@ -56,3 +56,13 @@ jobs:
           DB_HOST: ${{ secrets.PGHOST_PROD }}
           DB_PORT: ${{ secrets.PGPORT_PROD }}
         run: python main.py
+      
+      - name: 📩 Enviar log de Producción por correo
+        run: |
+          export LOG_PATH="logs/pro.log"
+          export ENTORNO="Master-Pro"
+          python enviar_log_por_correo.py
+        env:
+          EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+          EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
