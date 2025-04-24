@@ -1,63 +1,69 @@
+# main.py
 import os
-from enviar_log_por_correo import enviar_log_por_correo
-import smtplib
-from email.message import EmailMessage
+import psycopg2
 from datetime import datetime
-import sys
-from sql_validator import validate_sql
-from executor import execute_sql
+from enviar_log_por_correo import enviar_log_por_correo
 
-BRANCH = os.getenv("GITHUB_REF", "refs/heads/development")
-SCRIPT_LIST = "scripts_PRO.txt" if BRANCH == "refs/heads/main" else "scripts_DEV.txt"
+def log(mensaje, log_path):
+    with open(log_path, "a") as f:
+        f.write(mensaje + "\n")
+    print(mensaje)
 
-def enviar_log_por_correo(log_path, entorno):
-    asunto = f"Postgres_Pre_Pro | Date: {datetime.now().strftime('%Y-%m-%d')} | Entorno: {entorno}"
-    cuerpo = f"Adjunto encontrarás el log de ejecución para el entorno {entorno}."
+def validar_sintaxis_sql(file_path):
+    with open(file_path, "r") as f:
+        sql = f.read()
+    return ";" in sql  # validación muy básica
 
-    msg = EmailMessage()
-    msg["Subject"] = asunto
-    msg["From"] = os.getenv("EMAIL_USER")
-    msg["To"] = os.getenv("EMAIL_DESTINO")
-    msg.set_content(cuerpo)
+def ejecutar_sql(script_path, conn, log_path):
+    log(f"🔍 Validando: {script_path}", log_path)
+    if not validar_sintaxis_sql(script_path):
+        log(f"❌ Sintaxis inválida en {script_path}", log_path)
+        return
 
-    with open(log_path, "rb") as f:
-        msg.add_attachment(f.read(), maintype="text", subtype="plain", filename=os.path.basename(log_path))
+    try:
+        with open(script_path, "r") as f:
+            sql = f.read()
 
-    with smtplib.SMTP_SSL(os.getenv("SMTP_HOST"), int(os.getenv("SMTP_PORT"))) as smtp:
-        smtp.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_PASS"))
-        smtp.send_message(msg)
-        print(f"📧 Log enviado por correo: {asunto}")
+        with conn.cursor() as cursor:
+            cursor.execute(sql)
+            conn.commit()
+        log(f"✅ Script ejecutado correctamente: {script_path}", log_path)
+    except Exception as e:
+        log(f"❌ Error ejecutando el script {script_path}: {e}", log_path)
 
 def main():
-    if not os.path.exists(SCRIPT_LIST):
-        print(f"❌ El archivo {SCRIPT_LIST} no existe.", file=sys.stderr)
-        print(f"❌ El archivo {SCRIPT_LIST} no existe.")
-        exit(1)
+    entorno = os.getenv("ENTORNO", "Master-Pre")
+    log_file = "logs/pre.log" if "Pre" in entorno else "logs/pro.log"
 
-    with open(SCRIPT_LIST, "r") as f:
-        scripts = [line.strip() for line in f if line.strip()]
+    os.makedirs("logs", exist_ok=True)
 
-    if not scripts:
-        print(f"❌ El archivo {SCRIPT_LIST} está vacío. No hay scripts que ejecutar.", file=sys.stderr)
-        print(f"❌ El archivo {SCRIPT_LIST} está vacío. No hay scripts que ejecutar.")
-        exit(1)
+    log(f"🚀 Iniciando despliegue en entorno {entorno}", log_file)
 
-    for script in scripts:
-        script_path = os.path.join("src", script)
-        print(f"🔍 Validando: {script_path}")
-        is_valid, errors, line_count = validate_sql(script_path)
+    db_params = {
+        "dbname": os.getenv("DB_NAME"),
+        "user": os.getenv("DB_USER"),
+        "password": os.getenv("DB_PASSWORD"),
+        "host": os.getenv("DB_HOST"),
+        "port": os.getenv("DB_PORT")
+    }
 
-        if not is_valid:
-            print("❌ Errores encontrados:")
-            for e in errors:
-                print(f"Línea {e['line']}: {e['message']}")
-            return
+    script_file = "src/scripts_dev.txt" if "Pre" in entorno else "src/scripts_PRO.txt"
 
-        print("✅ Sintaxis válida. Ejecutando...")
-        execute_sql(script_path)
+    try:
+        conn = psycopg2.connect(**db_params)
+        with conn:
+            with open(script_file, "r") as f:
+                for line in f:
+                    script_path = line.strip()
+                    if script_path:
+                        ejecutar_sql(script_path, conn, log_file)
+    except Exception as e:
+        log(f"❌ Error de conexión a la base de datos: {e}", log_file)
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+    enviar_log_por_correo(log_file, entorno=entorno)
 
 if __name__ == "__main__":
     main()
-      # Enviar el log por correo al finalizar
-    log_file = "logs/pro.log"
-    enviar_log_por_correo(log_file, entorno="Master-Pro")
